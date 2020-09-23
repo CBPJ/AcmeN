@@ -24,11 +24,11 @@ class AcmeN:
 
         # ACME params
         # production
-        # self.__ACME_DIRECTORY = 'https://acme-v02.api.letsencrypt.org/directory'
+        self.__ACME_DIRECTORY = 'https://acme-v02.api.letsencrypt.org/directory'
         # self.__ACME_DIRECTORY = 'https://api.buypass.com/acme/directory'
 
         # staging
-        self.__ACME_DIRECTORY = 'https://acme-staging-v02.api.letsencrypt.org/directory'
+        # self.__ACME_DIRECTORY = 'https://acme-staging-v02.api.letsencrypt.org/directory'
         # self.__ACME_DIRECTORY = 'https://api.test4.buypass.no/acme/directory'
 
         self.__CERTIFICATE_FORMAT = 'application/pem-certificate-chain'
@@ -44,7 +44,7 @@ class AcmeN:
 
         # Program params
         self.__GET_HEADERS = {
-            'User-Agent': 'acme-dns-tiny/2.1',
+            'User-Agent': 'acmen/0.1.0',
             'Accept-Language': 'en'
         }
 
