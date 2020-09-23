@@ -13,6 +13,8 @@ AcmeN实现了RFC8555中描述的以下特性：
 - 签发证书
 - 吊销证书
 
+**注意：**我们尚未对AcmeN进行完整的测试，如需在生产环境中使用，你需要自行测试其可靠性。另外，AcmeN仍在开发阶段，`v0.*.*`版本无法严格保证API向后兼容性。
+
 ## 安装依赖
 
 使用git克隆代码：
@@ -26,6 +28,8 @@ pip install -r requirements.txt
 或者手动下载解压后使用pip安装依赖
 
 然后打开`main.py`按照需要修改其中的代码并执行。
+
+另外，AcmeN依赖[OpenSSL](https://www.openssl.org/)才能运行，请确保openssl在你的`PATH`变量中，如果你使用windows且没有安装openssl，你可以在[Release](https://github.com/CBPJ/AcmeN/releases/)页面下载我们编译好的版本。对于Linux，你可以使用软件包管理器安装。
 
 ## 签发证书
 
@@ -169,4 +173,45 @@ acme.deactivate_account():
 由于[Godaddy Domain API v1](https://developer.godaddy.com/doc/endpoint/domains#/)中并未提供删除DNS记录的方法，因此在使用`GodaddyDNSHandler`删除DNS记录时，我们采用了一种折中方案。这导致当你只有一条DNS记录时，将无法删除这条记录。在AcmeN第一次要求你手动删除记录时，你可以暂时忽略它，直接按`Enter`键继续，后续删除操作将可以正常运行，等程序结束后手动删除第一条记录。或者，你可以永久保留一条TXT记录。
 
 尽管我们在Godaddy域名管理器的网页版中发现了API v3提供了删除DNS记录的方法，但是Godaddy并没有公开发布API v3，我们也未找到相关文档，目前，AcmeN只使用已经公开发布的API接口。
+
+## 其他用法
+
+### 使用其他ACME服务商
+
+默认情况下，AcmeN使用[Let's Encrypt](https://letsencrypt.org/)提供的证书签发服务。但同时，AcmeN也内置了[buypass](https://www.buypass.com/ssl/products/acme)的服务器地址。如需切换服务商，在`AcmeN.py`中找到：
+
+```python
+# ACME params
+# production
+self.__ACME_DIRECTORY = 'https://acme-v02.api.letsencrypt.org/directory'
+# self.__ACME_DIRECTORY = 'https://api.buypass.com/acme/directory'
+
+# staging
+# self.__ACME_DIRECTORY = 'https://acme-staging-02.api.letsencrypt.org/directory'
+# self.__ACME_DIRECTORY = 'https://api.test4.buypass.no/acme/directory'
+```
+
+注释letsencrypt的url改为使用buypass的即可。另外，AcmeN也内置了二者的测试环境，供测试使用。
+
+但是注意，AcmeN是为使用letsencrypt的服务而设计的，由于buypass也使用Acme协议，因此AcmeN与其兼容。但目前(2020.09.23)，buypass对384位ECC证书的支持并不完善，选择使用buypass API前，请使用其测试服务器测试兼容性。
+
+### 使用不同密钥长度的数字证书
+
+AcmeN默认使用4096位RSA密钥，或384位ECC密钥(secp384r1)。如果你希望使用不同的密钥长度，你可以自行生成密钥，并创建对应的CSR，然后通过CSR获取证书。
+
+也可以修改代码实现，在`AcmeN.py`中找到`get_cert_from_csr`方法：
+
+```python
+def get_cert_from_domain(self, domain, dns_name: list = None, cert_type='rsa', dns_handler: DNSHandlerBase = None):
+    # ....
+    if cert_type.lower() == 'rsa':
+        self.__openssl('genrsa', ['-out', key_filename, '4096'])
+    elif cert_type.lower() == 'ecc':
+        self.__openssl('ecparam', ['-genkey', '-name', 'secp384r1', '-noout', '-out', key_filename])
+    # ....
+```
+
+这是AcmeN使用Openssl生成证书私钥的逻辑，对于RSA证书，你可以将`'4096'`替换为你希望的长度，但注意不应低于2048。对于ECC证书，你可以将`'secp384r1'`替换为你希望使用的曲线。但是同样的，不恰当的曲线可能会引起程序异常，或者服务商拒绝签发证书，请在使用前进行测试。
+
+
 

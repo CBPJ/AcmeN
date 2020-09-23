@@ -7,7 +7,7 @@ copyright: copyright (c) 2020 Huo Jiacheng
 nav:
     - 主页: index.md
     - 开发者: developer.md
-    - 致谢: Acknowledgments.md
+    - 致谢: acknowledgment.md
 markdown_extensions: 
     - toc:
         permalink: True
