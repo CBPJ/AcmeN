@@ -1,0 +1,45 @@
+name: Deploy Github Pages
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+    paths: 
+      - docs/**
+
+jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        
+      - name: Setup python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+          
+      - name: Install mkdocs
+        run: pip install -U mkdocs
+      
+      - name: Build docs
+        run: |
+          cd ${{ github.workspace }}/docs 
+          mkdocs build 
+          mv ./docs /tmp/docs 
+          cd ${{ github.workspace }} 
+          
+      - uses: actions/checkout@v2
+        with:
+          ref: pages
+          
+      - name: Deploy docs
+        run: |
+          cd ${{ github.workspace }}
+          rm -rf * 
+          mv /tmp/docs/* ./ 
+          touch .nojekyll 
+          git config user.name "explr"
+          git config user.email "explr@qq.com"
+          git add -A
+          git commit -m "automatically update pages" 
+          git push origin pages
