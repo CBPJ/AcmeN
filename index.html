@@ -78,6 +78,14 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#godaddy-api">关于Godaddy API的特别说明</a>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_11">其他用法</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#acme">使用其他ACME服务商</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#_12">使用不同密钥长度的数字证书</a>
+    </li>
+        </ul>
+    </li>
     </ul>
                     </li>
                 </ul>
@@ -86,7 +94,7 @@
                     </li>
                 </ul>
                 <ul>
-                    <li class="toctree-l1"><a class="reference internal" href="Acknowledgments/">致谢</a>
+                    <li class="toctree-l1"><a class="reference internal" href="acknowledgment/">致谢</a>
                     </li>
                 </ul>
       </div>
@@ -133,6 +141,7 @@
 <li>签发证书</li>
 <li>吊销证书</li>
 </ul>
+<p><strong>注意：</strong>我们尚未对AcmeN进行完整的测试，如需在生产环境中使用，你需要自行测试其可靠性。另外，AcmeN仍在开发阶段，<code>v0.*.*</code>版本无法严格保证API向后兼容性。</p>
 <h2 id="_2">安装依赖<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
 <p>使用git克隆代码：</p>
 <pre><code class="bash">git clone https://github.com/CBPJ/AcmeN
@@ -142,6 +151,7 @@ pip install -r requirements.txt
 
 <p>或者手动下载解压后使用pip安装依赖</p>
 <p>然后打开<code>main.py</code>按照需要修改其中的代码并执行。</p>
+<p>另外，AcmeN依赖<a href="https://www.openssl.org/">OpenSSL</a>才能运行，请确保openssl在你的<code>PATH</code>变量中，如果你使用windows且没有安装openssl，你可以在<a href="https://github.com/CBPJ/AcmeN/releases/">Release</a>页面下载我们编译好的版本。对于Linux，你可以使用软件包管理器安装。</p>
 <h2 id="_3">签发证书<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
 <p>AcmeN使用RFC8555规定的<code>dns-01</code>验证方式验证域名控制权，并通过调用DNS服务商的API更新或删除DNS记录。目前，AcmeN集成了Godaddy和腾讯云的API客户端。以Godaddy为例，<a href="https://github.com/CBPJ/AcmeN/blob/master/main.py"><code>main.py</code></a>中给出了签发证书的过程:</p>
 <pre><code class="python">from AcmeN import AcmeN
@@ -231,6 +241,34 @@ acme.key_change(new_key_file, password='')
 <h2 id="godaddy-api">关于Godaddy API的特别说明<a class="headerlink" href="#godaddy-api" title="Permanent link">&para;</a></h2>
 <p>由于<a href="https://developer.godaddy.com/doc/endpoint/domains#/">Godaddy Domain API v1</a>中并未提供删除DNS记录的方法，因此在使用<code>GodaddyDNSHandler</code>删除DNS记录时，我们采用了一种折中方案。这导致当你只有一条DNS记录时，将无法删除这条记录。在AcmeN第一次要求你手动删除记录时，你可以暂时忽略它，直接按<code>Enter</code>键继续，后续删除操作将可以正常运行，等程序结束后手动删除第一条记录。或者，你可以永久保留一条TXT记录。</p>
 <p>尽管我们在Godaddy域名管理器的网页版中发现了API v3提供了删除DNS记录的方法，但是Godaddy并没有公开发布API v3，我们也未找到相关文档，目前，AcmeN只使用已经公开发布的API接口。</p>
+<h2 id="_11">其他用法<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h2>
+<h3 id="acme">使用其他ACME服务商<a class="headerlink" href="#acme" title="Permanent link">&para;</a></h3>
+<p>默认情况下，AcmeN使用<a href="https://letsencrypt.org/">Let's Encrypt</a>提供的证书签发服务。但同时，AcmeN也内置了<a href="https://www.buypass.com/ssl/products/acme">buypass</a>的服务器地址。如需切换服务商，在<code>AcmeN.py</code>中找到：</p>
+<pre><code class="python"># ACME params
+# production
+self.__ACME_DIRECTORY = 'https://acme-v02.api.letsencrypt.org/directory'
+# self.__ACME_DIRECTORY = 'https://api.buypass.com/acme/directory'
+
+# staging
+# self.__ACME_DIRECTORY = 'https://acme-staging-02.api.letsencrypt.org/directory'
+# self.__ACME_DIRECTORY = 'https://api.test4.buypass.no/acme/directory'
+</code></pre>
+
+<p>注释letsencrypt的url改为使用buypass的即可。另外，AcmeN也内置了二者的测试环境，供测试使用。</p>
+<p>但是注意，AcmeN是为使用letsencrypt的服务而设计的，由于buypass也使用Acme协议，因此AcmeN与其兼容。但目前(2020.09.23)，buypass对384位ECC证书的支持并不完善，选择使用buypass API前，请使用其测试服务器测试兼容性。</p>
+<h3 id="_12">使用不同密钥长度的数字证书<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h3>
+<p>AcmeN默认使用4096位RSA密钥，或384位ECC密钥(secp384r1)。如果你希望使用不同的密钥长度，你可以自行生成密钥，并创建对应的CSR，然后通过CSR获取证书。</p>
+<p>也可以修改代码实现，在<code>AcmeN.py</code>中找到<code>get_cert_from_csr</code>方法：</p>
+<pre><code class="python">def get_cert_from_domain(self, domain, dns_name: list = None, cert_type='rsa', dns_handler: DNSHandlerBase = None):
+    # ....
+    if cert_type.lower() == 'rsa':
+        self.__openssl('genrsa', ['-out', key_filename, '4096'])
+    elif cert_type.lower() == 'ecc':
+        self.__openssl('ecparam', ['-genkey', '-name', 'secp384r1', '-noout', '-out', key_filename])
+    # ....
+</code></pre>
+
+<p>这是AcmeN使用Openssl生成证书私钥的逻辑，对于RSA证书，你可以将<code>'4096'</code>替换为你希望的长度，但注意不应低于2048。对于ECC证书，你可以将<code>'secp384r1'</code>替换为你希望使用的曲线。但是同样的，不恰当的曲线可能会引起程序异常，或者服务商拒绝签发证书，请在使用前进行测试。</p>
               
             </div>
           </div>
@@ -286,5 +324,5 @@ acme.key_change(new_key_file, password='')
 
 <!--
 MkDocs version : 1.1.2
-Build Date UTC : 2020-09-23 11:56:37.818098+00:00
+Build Date UTC : 2020-09-23 13:43:05.693748+00:00
 -->
