@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="None">
+  
+  
+  <link rel="shortcut icon" href="img/favicon.ico">
+  <title>AcmeN Docs</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700" />
+
+  <link rel="stylesheet" href="css/theme.css" />
+  <link rel="stylesheet" href="css/theme_extra.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css" />
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "\u4e3b\u9875";
+    var mkdocs_page_input_path = "index.md";
+    var mkdocs_page_url = null;
+  </script>
+  
+  <script src="js/jquery-2.1.1.min.js" defer></script>
+  <script src="js/modernizr-2.8.3.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script> 
+  
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+        <a href="." class="icon icon-home"> AcmeN Docs</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="./search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+                <ul class="current">
+                    <li class="toctree-l1 current"><a class="reference internal current" href=".">主页</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#_1">特性</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_2">安装依赖</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_3">签发证书</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#_4">指定私钥位置</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#dnshandler">创建DNSHandler</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#_5">获取证书</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_6">吊销证书</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#_7">使用证书私钥吊销证书</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#_8">使用账户密钥吊销证书</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_9">账户密钥轮换</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_10">注销账户</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#godaddy-api">关于Godaddy API的特别说明</a>
+    </li>
+    </ul>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="developer/">开发者</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="Acknowledgments/">致谢</a>
+                    </li>
+                </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href=".">AcmeN Docs</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".">Docs</a> &raquo;</li>
+    
+      
+    
+    <li>主页</li>
+    <li class="wy-breadcrumbs-aside">
+      
+    </li>
+  </ul>
+  
+  <hr/>
+</div>
+          <div role="main">
+            <div class="section">
+              
+                <h1 id="acmen">AcmeN<a class="headerlink" href="#acmen" title="Permanent link">&para;</a></h1>
+<p><a href="https://tools.ietf.org/html/rfc8555">RFC8555</a>自动证书管理环境Python客户端</p>
+<h2 id="_1">特性<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<p>AcmeN实现了RFC8555中描述的以下特性：</p>
+<ul>
+<li>注册新账户</li>
+<li>更新联系方式</li>
+<li>轮换账户密钥</li>
+<li>注销账户</li>
+<li>签发证书</li>
+<li>吊销证书</li>
+</ul>
+<h2 id="_2">安装依赖<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<p>使用git克隆代码：</p>
+<pre><code class="bash">git clone https://github.com/CBPJ/AcmeN
+cd AcmeN
+pip install -r requirements.txt
+</code></pre>
+
+<p>或者手动下载解压后使用pip安装依赖</p>
+<p>然后打开<code>main.py</code>按照需要修改其中的代码并执行。</p>
+<h2 id="_3">签发证书<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
+<p>AcmeN使用RFC8555规定的<code>dns-01</code>验证方式验证域名控制权，并通过调用DNS服务商的API更新或删除DNS记录。目前，AcmeN集成了Godaddy和腾讯云的API客户端。以Godaddy为例，<a href="https://github.com/CBPJ/AcmeN/blob/master/main.py"><code>main.py</code></a>中给出了签发证书的过程:</p>
+<pre><code class="python">from AcmeN import AcmeN
+from DnsHandlers import GoDaddyDNSHandler
+
+acme = AcmeN('account.key')
+dns = GoDaddyDNSHandler('sso-key *****:****')
+acme.get_cert_from_domain('foo.example.com', dns_name=['foo1.example.com', 'foo2.example.com'], cert_type='rsa', dns_handler=dns)
+</code></pre>
+
+<hr />
+<h3 id="_4">指定私钥位置<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
+<p>上述实例中，<code>account.key</code>代表账户私钥位置，如果此私钥尚未注册账户，在需要时会自动注册。</p>
+<p>如果账户私钥使用密码保护，可以在创建AcmeN实例时传入密码，如果希望设定账户的联系方式，也可以在此时设定。这两个参数都是可选的。</p>
+<pre><code class="python">acme = AcmeN('account.key', account_key_password='&lt;your_password&gt;', contact=['mailto:foo@example.com'])
+</code></pre>
+
+<p>如果你没有账户私钥，可以使用OpenSSL生成：</p>
+<pre><code class="bash">openssl genrsa -out account.key 4096
+</code></pre>
+
+<hr />
+<h3 id="dnshandler">创建DNSHandler<a class="headerlink" href="#dnshandler" title="Permanent link">&para;</a></h3>
+<p>使用Godaddy提供的DNS服务时，访问令牌以<code>sso-key</code>开头，创建<code>GodaddyDNSHandler</code>时传入即可。</p>
+<p>使用腾讯与提供的DNS服务时，访问令牌包括<code>secret_id</code>和<code>secret_key</code>两部分，创建<code>TencentDnsHandler</code>时传入：</p>
+<pre><code class="python">from DnsHandlers import TencentDNSHandler
+dns = TencentDNSHandler('&lt;your_secret_id&gt;', '&lt;your_secret_key&gt;')
+</code></pre>
+
+<p>如果你希望手动设置/删除DNS记录，可以跳过此步骤。另外，你也可以实现自己的DNSHanlder。</p>
+<hr />
+<h3 id="_5">获取证书<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+<p>有以下两种方式可以获取证书</p>
+<ol>
+<li>通过CSR文件获取证书：</li>
+</ol>
+<pre><code class="python">acme.get_cert_from_csr('&lt;path/to/csr_file&gt;', dns_handler=dns)
+</code></pre>
+
+<ol>
+<li>通过域名获取证书：</li>
+</ol>
+<pre><code class="python">acme.get_cert_from_domain('foo.example.com', dns_name=['foo1.example.com', 'foo2.example.com'], cert_type='rsa', dns_handler=dns)
+</code></pre>
+
+<p>其中<code>foo.example.com</code>是证书的CommonName，是唯一一个必须参数。</p>
+<p><code>dns_name</code>：DNS名称，指定DNS名称可以创建多域名证书，可选参数。</p>
+<p><code>cert_type</code>：证书类型，可以设置为<code>rsa</code>或<code>ecc</code>，设置为rsa时，将生成4096位RSA私钥，设置为ecc时，使用secp384r1曲线生成私钥。如果你希望使用不同的密钥长度，你需要修改代码。可选参数。</p>
+<p><code>dns_handler</code>：在上面步骤中创建的DNSHandler，如果你希望手动操作DNS记录，忽略此参数。可选参数。</p>
+<hr />
+<p>正常情况下，AcmeN会生成：</p>
+<p>密钥文件：<code>{域名}.{时间戳}.{密钥类型}.key</code></p>
+<p>证书文件：<code>{域名}.{时间戳}.{密钥类型}.crt</code></p>
+<p>如果DNS记录操作失败，或者你没有传入<code>dns_handler</code>参数，AcmeN会在需要添加/删除DNS记录时停下来，你需要根据日志提示信息设置或删除DNS记录。完成后按<code>Enter</code>键继续。另外，在设置DNS记录后，通知Acme服务器验证记录前，AcmeN会尝试解析DNS记录，如果经过数次尝试后解析失败，你同样需要根据日志提示，等待DNS记录正确扩散后按<code>Enter</code>键继续运行。</p>
+<h2 id="_6">吊销证书<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
+<h3 id="_7">使用证书私钥吊销证书<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
+<pre><code class="python">acme.revoke_cert_by_private_key(cert_file, private_key_file, key_password='', reason=1)
+</code></pre>
+
+<p><code>cert_file</code>：需要吊销的证书文件，必须参数。</p>
+<p><code>private_key_file</code>： 与证书文件对应的私钥，必须参数。</p>
+<p><code>key_password</code>：保护私钥的密码，可选参数。</p>
+<p><code>reason</code>：<a href="https://tools.ietf.org/html/rfc5280#section-5.3.1">RFC5280</a>规定的吊销原因，默认值是1，表示私钥泄露。可选参数。</p>
+<hr />
+<h3 id="_8">使用账户密钥吊销证书<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
+<pre><code class="python">acme.revoke_cert_by_private_key(self, cert_file, private_key_file, key_password='', reason:=1):
+</code></pre>
+
+<p><code>cert_file</code>：需要吊销的证书文件，必须参数。</p>
+<p><code>private_key_file</code>： 账户私钥文件，必须参数。</p>
+<p><code>key_password</code>：保护私钥的密码，可选参数。</p>
+<p><code>reason</code>：<a href="https://tools.ietf.org/html/rfc5280#section-5.3.1">RFC5280</a>规定的吊销原因，默认值是1，表示私钥泄露。可选参数。</p>
+<p>在使用账户密钥吊销证书时，若Acme服务器缓存了对域名所有权的验证，则可以直接吊销。否则AcmeN会自动执行和签发证书相同的域名所有权验证流程。详情请见<a href="https://tools.ietf.org/html/rfc8555#section-7.6">RFC8555 Certificate Revocation</a></p>
+<h2 id="_9">账户密钥轮换<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h2>
+<p>以旧密钥创建AcmeN实例后，调用<code>key_change</code>方法：</p>
+<pre><code class="python">acme = AcmeN('old_key.key')
+acme.key_change(new_key_file, password='')
+</code></pre>
+
+<p><code>new_key_file</code>：新密钥文件</p>
+<p><code>password</code>：保护新密钥的密码</p>
+<h2 id="_10">注销账户<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h2>
+<pre><code class="python">acme.deactivate_account():
+</code></pre>
+
+<p><strong>注意</strong>：根据<a href="https://tools.ietf.org/html/rfc8555#section-7.3.6">RFC8555 Account Deactivation</a>的规定，Acme<strong>不提供</strong>重新启用账户的方法。</p>
+<h2 id="godaddy-api">关于Godaddy API的特别说明<a class="headerlink" href="#godaddy-api" title="Permanent link">&para;</a></h2>
+<p>由于<a href="https://developer.godaddy.com/doc/endpoint/domains#/">Godaddy Domain API v1</a>中并未提供删除DNS记录的方法，因此在使用<code>GodaddyDNSHandler</code>删除DNS记录时，我们采用了一种折中方案。这导致当你只有一条DNS记录时，将无法删除这条记录。在AcmeN第一次要求你手动删除记录时，你可以暂时忽略它，直接按<code>Enter</code>键继续，后续删除操作将可以正常运行，等程序结束后手动删除第一条记录。或者，你可以永久保留一条TXT记录。</p>
+<p>尽管我们在Godaddy域名管理器的网页版中发现了API v3提供了删除DNS记录的方法，但是Godaddy并没有公开发布API v3，我们也未找到相关文档，目前，AcmeN只使用已经公开发布的API接口。</p>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="developer/" class="btn btn-neutral float-right" title="开发者">Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+      <p>copyright (c) 2020 Huo Jiacheng</p>
+    
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      
+      
+      
+        <span style="margin-left: 15px"><a href="developer/" style="color: #fcfcfc">Next &raquo;</a></span>
+      
+    </span>
+</div>
+    <script>var base_url = '.';</script>
+    <script src="js/theme.js" defer></script>
+      <script src="search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>
+
+<!--
+MkDocs version : 1.1.2
+Build Date UTC : 2020-09-23 11:56:37.818098+00:00
+-->
