@@ -75,7 +75,7 @@ from DnsHandlers import TencentDNSHandler
 dns = TencentDNSHandler('<your_secret_id>', '<your_secret_key>')
 ```
 
-如果你希望手动设置/删除DNS记录，可以跳过此步骤。另外，你也可以实现自己的DNSHanlder。
+如果你希望手动设置/删除DNS记录，可以跳过此步骤。另外，你也可以实现自己的DNSHandler。
 
 -----
 
@@ -212,6 +212,3 @@ def get_cert_from_domain(self, domain, dns_name: list = None, cert_type='rsa', d
 ```
 
 这是AcmeN使用Openssl生成证书私钥的逻辑，对于RSA证书，你可以将`'4096'`替换为你希望的长度，但注意不应低于2048。对于ECC证书，你可以将`'secp384r1'`替换为你希望使用的曲线。但是同样的，不恰当的曲线可能会引起程序异常，或者服务商拒绝签发证书，请在使用前进行测试。
-
-
-

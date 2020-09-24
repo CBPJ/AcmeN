@@ -33,7 +33,7 @@ self.get_subdomain(dns_doamin)
 ### del_record方法
 
 ```python
-def del_secord(self, dns_domain, value)
+def del_record(self, dns_domain, value)
 ```
 
 `dns_domain`：要删除TXT记录的DNS域名，例如`_acme-challenge.foo.example.com`。
@@ -41,4 +41,3 @@ def del_secord(self, dns_domain, value)
 `value`：TXT记录的值。
 
 在大多数DNS服务商的API中，删除一条记录并不需要提供这条记录的值。但是在默认DNSHandler实现中，会先从DNS服务商获取`dns_doamin`对应的记录值，并于`value`进行比较，相符时才会进行删除操作。我们建议你也使用类似的做法，以尽可能避免错误的DNS操作。
-
