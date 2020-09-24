@@ -1,7 +1,7 @@
 import json, re, time, secrets, hmac, base64, urllib.parse, abc
 import requests, tld
 
-__all__ = ['DNSHandlerBase', 'GoDaddyDNSHandler', 'TencentDNSHandler']
+__all__ = ['DNSHandlerBase', 'DefaultDNSHandler', 'GoDaddyDNSHandler', 'TencentDNSHandler']
 
 
 class DNSHandlerBase(abc.ABC):
@@ -20,6 +20,16 @@ class DNSHandlerBase(abc.ABC):
     @staticmethod
     def get_first_level_domain(dns_domain):
         return tld.get_tld(dns_domain, as_object=True, fix_protocol=True).fld
+
+
+class DefaultDNSHandler(DNSHandlerBase):
+    def set_record(self, dns_domain, value):
+        return False
+        pass
+
+    def del_record(self, dns_domain, value):
+        return False
+        pass
 
 
 class GoDaddyDNSHandler(DNSHandlerBase):

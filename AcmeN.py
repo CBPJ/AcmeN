@@ -2,17 +2,7 @@ import subprocess, json, sys, base64, binascii, time, hashlib, re, logging, os, 
 
 import requests
 import dns.resolver
-from DnsHandlers import DNSHandlerBase
-
-
-class DefaultDNSHandler(DNSHandlerBase):
-    def set_record(self, dns_domain, value):
-        return False
-        pass
-
-    def del_record(self, dns_domain, value):
-        return False
-        pass
+from DnsHandlers import *
 
 
 class AcmeN:
