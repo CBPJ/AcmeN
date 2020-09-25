@@ -83,13 +83,13 @@ dns = TencentDNSHandler('<your_secret_id>', '<your_secret_key>')
 
 有以下两种方式可以获取证书
 
-1. 通过CSR文件获取证书：
+- 通过CSR文件获取证书：
 
 ```python
 acme.get_cert_from_csr('<path/to/csr_file>', dns_handler=dns)
 ```
 
-2. 通过域名获取证书：
+- 通过域名获取证书：
 
 ```python
 acme.get_cert_from_domain('foo.example.com', dns_name=['foo1.example.com', 'foo2.example.com'], cert_type='rsa', dns_handler=dns)
