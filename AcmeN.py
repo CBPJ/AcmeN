@@ -57,6 +57,9 @@ class AcmeN:
         self.__THUMB_PRINT = self.__read_key(self.__ACCOUNT_KEY_FILE, self.__ACCOUNT_KEY_PASSWORD)
         pass
 
+    def __del__(self):
+        self.__requests_session.close()
+
     @staticmethod
     def __b64(b):
         """"Encodes string as base64 as specified in ACME RFC """
