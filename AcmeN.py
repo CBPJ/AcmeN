@@ -355,6 +355,7 @@ class AcmeN:
 
     def __complete_challenge(self, order: dict, dns_operator: DNSHandlerBase = None):
         dns_operator = dns_operator or DefaultDNSHandler()
+        dns_operator.session = self.__requests_session
 
         if order['status'] == 'ready':
             self.__log.info('No challenge to process: order is already ready')

@@ -5,6 +5,36 @@ __all__ = ['DNSHandlerBase', 'DefaultDNSHandler', 'GoDaddyDNSHandler', 'TencentD
 
 
 class DNSHandlerBase(abc.ABC):
+    __session = None
+    __share_session = False
+
+    def __close_unshared_session(self):
+        if (not self.__share_session) and (self.__session is not None):
+            self.__session.close()
+        self.__session = None
+        self.__share_session = False
+
+    @property
+    def session(self):
+        if self.__session is None:
+            self.__session = requests.session()
+            self.__session.headers.update(Connection='Keep-Alive')
+            self.__share_session = False
+        return self.__session
+
+    @session.setter
+    def session(self, s):
+        self.__close_unshared_session()
+        self.__share_session = True
+        self.__session = s
+
+    @session.deleter
+    def session(self):
+        self.__close_unshared_session()
+
+    def __del__(self):
+        self.__close_unshared_session()
+
     @abc.abstractmethod
     def set_record(self, dns_domain, value):
         pass
@@ -44,8 +74,8 @@ class GoDaddyDNSHandler(DNSHandlerBase):
     def set_record(self, dns_domain, value):
         domain = self.get_first_level_domain(dns_domain)
         name = self.get_subdomain(dns_domain)
-        res = requests.put(f'https://api.godaddy.com/v1/domains/{domain}/records/TXT/{name}', headers=self.__header,
-                           data=json.dumps([{'data': value, 'name': name, 'ttl': 600, 'type': 'TXT'}]))
+        res = self.session.put(f'https://api.godaddy.com/v1/domains/{domain}/records/TXT/{name}', headers=self.__header,
+                               data=json.dumps([{'data': value, 'name': name, 'ttl': 600, 'type': 'TXT'}]))
 
         return res.status_code == 200
         pass
@@ -54,15 +84,16 @@ class GoDaddyDNSHandler(DNSHandlerBase):
         """delete dns record with specific name and value"""
         domain = self.get_first_level_domain(dns_domain)
         name = self.get_subdomain(dns_domain)
-        info = requests.get(f'https://api.godaddy.com/v1/domains/{domain}/records/TXT/', headers=self.__header).json()
+        info = self.session.get(f'https://api.godaddy.com/v1/domains/{domain}/records/TXT/',
+                                headers=self.__header).json()
 
         # when value is None, the record will be deleted whatever the value it has
         data = [i for i in info if i['name'] != name or i['data'] != value and value is not None]
 
         if len(data) == len(info) or len(data) == 0:  # godaddy API cannot delete a single record
             return False
-        res = requests.put(f'https://api.godaddy.com/v1/domains/{domain}/records/TXT/', headers=self.__header,
-                           data=json.dumps(data))
+        res = self.session.put(f'https://api.godaddy.com/v1/domains/{domain}/records/TXT/', headers=self.__header,
+                               data=json.dumps(data))
         return res.status_code == 200
 
 
@@ -71,8 +102,6 @@ class TencentDNSHandler(DNSHandlerBase):
         self.__secret_id = secret_id
         self.__secret_key = secret_key
         self.__path = 'https://cns.api.qcloud.com/v2/index.php'
-        self.__session = requests.Session()
-        self.__session.headers.update(Connection='Keep-Alive')
 
     def __get_signature(self, method, data: dict):
         result = {
@@ -102,7 +131,7 @@ class TencentDNSHandler(DNSHandlerBase):
             'recordType': 'TXT'
         }
         req, _, _ = self.__get_signature('POST', data)
-        res = self.__session.post(self.__path, data=req, headers={})
+        res = self.session.post(self.__path, data=req, headers={})
         if res.status_code == 200:
             return res.json()
         else:
@@ -125,7 +154,7 @@ class TencentDNSHandler(DNSHandlerBase):
             'ttl': 600
         }
         req, _, _ = self.__get_signature('POST', data)
-        res = self.__session.post(self.__path, data=req, headers={})
+        res = self.session.post(self.__path, data=req, headers={})
         return res.status_code == 200 and res.json()['code'] == 0
 
     def del_record(self, dns_domain, value):
@@ -147,6 +176,6 @@ class TencentDNSHandler(DNSHandlerBase):
             'recordId': record_id
         }
         req, _, _ = self.__get_signature('POST', data)
-        res = self.__session.post(self.__path, data=req, headers={})
+        res = self.session.post(self.__path, data=req, headers={})
         return res.status_code == 200 and res.json()['code'] == 0
         pass
