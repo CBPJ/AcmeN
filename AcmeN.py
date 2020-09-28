@@ -1,4 +1,4 @@
-import subprocess, json, sys, base64, binascii, time, hashlib, re, logging, os, uuid
+import subprocess, json, sys, base64, binascii, time, hashlib, re, logging, os, uuid, functools
 
 import requests
 import dns.resolver
@@ -6,7 +6,7 @@ from DnsHandlers import *
 
 
 class AcmeN:
-    def __init__(self, account_key_file='account.key', account_key_password='', contact=None):
+    def __init__(self, account_key_file=None, account_key_password='', contact=None):
         # logger
         self.__log = logging.getLogger()
         self.__log.addHandler(logging.StreamHandler())
@@ -52,10 +52,17 @@ class AcmeN:
 
         self.__log.info('Fetching information from the ACME directory')
         self.__DIRECTORY = self.__requests_session.get(self.__ACME_DIRECTORY, headers=self.__GET_HEADERS).json()
-
-        self.__JWS_HEADERS, \
-        self.__THUMB_PRINT = self.__read_key(self.__ACCOUNT_KEY_FILE, self.__ACCOUNT_KEY_PASSWORD)
         pass
+
+    @property
+    def __JWS_HEADERS(self):
+        result, _ = self.__read_key(self.__ACCOUNT_KEY_FILE, self.__ACCOUNT_KEY_PASSWORD)
+        return result
+
+    @property
+    def __THUMB_PRINT(self):
+        _, result = self.__read_key(self.__ACCOUNT_KEY_FILE, self.__ACCOUNT_KEY_PASSWORD)
+        return result
 
     def __del__(self):
         self.__requests_session.close()
@@ -101,7 +108,11 @@ class AcmeN:
 
         return temp
 
+    @functools.lru_cache
     def __read_key(self, key_file, password=''):
+        if not key_file:
+            self.__log.fatal('no key file specified')
+            raise ValueError('no key file specified')
         try:
             return self.__read_rsa_key(key_file, password=password)
         except IOError:
@@ -190,7 +201,7 @@ class AcmeN:
     def __send_signed_request(self, url, payload, sign_key=None, key_password='', http_headers=None):
         """Sends signed requests to ACME server."""
         if sign_key:
-            protected, _ = self.__read_key(sign_key)
+            protected, _ = self.__read_key(sign_key, key_password)
         else:
             protected = self.__JWS_HEADERS.copy()
 
@@ -319,7 +330,6 @@ class AcmeN:
         # Create order and return order's information and location
         self.__log.info('Creating new order')
 
-        # TODO: add notBefore and notAfter
         order_info = {"identifiers": [{"type": "dns", "value": i} for i in domains]}
         response, order = self.__send_signed_request(self.__DIRECTORY['newOrder'], order_info)
         if response.status_code == 201:
@@ -555,8 +565,6 @@ class AcmeN:
 
         self.__ACCOUNT_KEY_FILE = new_key_file
         self.__ACCOUNT_KEY_PASSWORD = password
-        self.__JWS_HEADERS, \
-        self.__THUMB_PRINT = self.__read_key(self.__ACCOUNT_KEY_FILE, self.__ACCOUNT_KEY_PASSWORD)
         self.__log.info('key Changed')
 
     def deactivate_account(self):

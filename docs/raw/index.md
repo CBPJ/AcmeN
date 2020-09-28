@@ -199,7 +199,7 @@ self.__ACME_DIRECTORY = 'https://acme-v02.api.letsencrypt.org/directory'
 
 AcmeN默认使用4096位RSA密钥，或384位ECC密钥(secp384r1)。如果你希望使用不同的密钥长度，你可以自行生成密钥，并创建对应的CSR，然后通过CSR获取证书。
 
-也可以修改代码实现，在`AcmeN.py`中找到`get_cert_from_csr`方法：
+也可以修改代码实现，在`AcmeN.py`中找到`get_cert_from_domain`方法：
 
 ```python
 def get_cert_from_domain(self, domain, dns_name: list = None, cert_type='rsa', dns_handler: DNSHandlerBase = None):
