@@ -105,25 +105,21 @@
 <h2 id="dnsapi">创建DNS服务商API客户端<a class="headerlink" href="#dnsapi" title="Permanent link">&para;</a></h2>
 <p>要创建API客户端你需要继承<code>DnsHandlers.py</code>中的<code>DNSHandlerBase</code>，并实现<code>set_record</code>和<code>del_record</code>两个抽象方法。</p>
 <h3 id="set_record">set_record方法<a class="headerlink" href="#set_record" title="Permanent link">&para;</a></h3>
-<pre><code class="python">def set_record(self, dns_domain, value)
+<pre><code class="language-python">def set_record(self, dns_domain, value)
 </code></pre>
-
 <p><code>dns_domain</code>：要设置TXT记录的DNS域名，例如<code>_acme-challenge.foo.example.com</code>。</p>
 <p><code>value</code>：TXT记录的值。</p>
 <p>有时候你可能需要从域名中分离出First level domain以调用DNS服务商的API，<code>DNSHandlerBase</code>中提供了此方法，你可以在你实现的子类中调用：</p>
-<pre><code class="python">self.get_first_level_domain(dns_domain)
+<pre><code class="language-python">self.get_first_level_domain(dns_domain)
 </code></pre>
-
 <p>对于上述情况，这将返回：<code>example.com</code></p>
 <p><code>DNSHandlerBase</code>中也提供了分离子域名的方法：</p>
-<pre><code class="python">self.get_subdomain(dns_doamin)
+<pre><code class="language-python">self.get_subdomain(dns_doamin)
 </code></pre>
-
 <p>对于上述情况这将返回：<code>_acme-challenge.foo</code></p>
 <h3 id="del_record">del_record方法<a class="headerlink" href="#del_record" title="Permanent link">&para;</a></h3>
-<pre><code class="python">def del_record(self, dns_domain, value)
+<pre><code class="language-python">def del_record(self, dns_domain, value)
 </code></pre>
-
 <p><code>dns_domain</code>：要删除TXT记录的DNS域名，例如<code>_acme-challenge.foo.example.com</code>。</p>
 <p><code>value</code>：TXT记录的值。</p>
 <p>在大多数DNS服务商的API中，删除一条记录并不需要提供这条记录的值。但是在默认DNSHandler实现中，会先从DNS服务商获取<code>dns_doamin</code>对应的记录值，并于<code>value</code>进行比较，相符时才会进行删除操作。我们建议你也使用类似的做法，以尽可能避免错误的DNS操作。</p>
