@@ -9,8 +9,6 @@ class AcmeN:
     def __init__(self, account_key_file=None, account_key_password='', contact=None):
         # logger
         self.__log = logging.getLogger()
-        self.__log.addHandler(logging.StreamHandler())
-        self.__log.setLevel(logging.INFO)
 
         # ACME params
         # production
@@ -34,7 +32,7 @@ class AcmeN:
 
         # Program params
         self.__GET_HEADERS = {
-            'User-Agent': 'acmen/0.1.0',
+            'User-Agent': 'acmen/0.2.0',
             'Accept-Language': 'en'
         }
 
@@ -387,7 +385,8 @@ class AcmeN:
 
             set_result = dns_operator.set_record(dns_domain, key_digest64)
             if not set_result:
-                self.__log.warning('auto set dns record filed, set it manually, press ENTER when continue')
+                self.__log.warning('auto set dns record filed, set it manually, press ENTER to continue: \n{0}\n{1}'
+                                   .format(dns_domain, key_digest64))
                 input()
 
             if self.__PERFORM_DNS_SELF_CHECK:
@@ -399,7 +398,8 @@ class AcmeN:
                     if self.__dns_self_check(dns_domain, key_digest64):
                         break
                 else:
-                    self.__log.warning('dns self check failed after {0} retries'.format(self.__DNS_SELF_CHECK_RETRY))
+                    self.__log.warning('dns self check failed after {0} retries, press ENTER to continue'
+                                       .format(self.__DNS_SELF_CHECK_RETRY))
                     input('')
 
             self.__log.info("Asking ACME server to validate challenge")

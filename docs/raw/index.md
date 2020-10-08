@@ -36,9 +36,11 @@ pip install -r requirements.txt
 AcmeN使用RFC8555规定的`dns-01`验证方式验证域名控制权，并通过调用DNS服务商的API更新或删除DNS记录。目前，AcmeN集成了Godaddy和腾讯云的API客户端。以Godaddy为例，[`main.py`](https://github.com/CBPJ/AcmeN/blob/master/main.py)中给出了签发证书的过程:
 
 ```python
+import logging
 from AcmeN import AcmeN
 from DnsHandlers import GoDaddyDNSHandler
 
+logging.basicConfig(level=logging.INFO)
 acme = AcmeN('account.key')
 dns = GoDaddyDNSHandler('sso-key *****:****')
 acme.get_cert_from_domain('foo.example.com', dns_name=['foo1.example.com', 'foo2.example.com'], cert_type='rsa', dns_handler=dns)
@@ -66,13 +68,22 @@ openssl genrsa -out account.key 4096
 
 ### 创建DNSHandler
 
+目前AcmeN内置了Godaddy、腾讯云、Cloudflare的DNSHandler。
+
 使用Godaddy提供的DNS服务时，访问令牌以`sso-key`开头，创建`GodaddyDNSHandler`时传入即可。
 
 使用腾讯与提供的DNS服务时，访问令牌包括`secret_id`和`secret_key`两部分，创建`TencentDnsHandler`时传入：
 
 ```python
-from DnsHandlers import TencentDNSHandler
+from DnsHandlers import *
+# Tencent:
 dns = TencentDNSHandler('<your_secret_id>', '<your_secret_key>')
+# Godaddy:
+dns = GodaddyDNSHandler('sso-key *****')
+# Cloudflare (APIToken):
+dns = CloudflareDNSHandler(api_token='<your_token>')
+# Cloudflare (APIKey):
+dns = CloudflareDNSHandler(api_key=('<your_api_key>', 'your_email'))
 ```
 
 如果你希望手动设置/删除DNS记录，可以跳过此步骤。另外，你也可以实现自己的DNSHandler。
@@ -95,20 +106,15 @@ acme.get_cert_from_csr('<path/to/csr_file>', dns_handler=dns)
 acme.get_cert_from_domain('foo.example.com', dns_name=['foo1.example.com', 'foo2.example.com'], cert_type='rsa', dns_handler=dns)
 ```
 
-其中`foo.example.com`是证书的CommonName，是唯一一个必须参数。
-
-`dns_name`：DNS名称，指定DNS名称可以创建多域名证书，可选参数。
-
-`cert_type`：证书类型，可以设置为`rsa`或`ecc`，设置为rsa时，将生成4096位RSA私钥，设置为ecc时，使用secp384r1曲线生成私钥。如果你希望使用不同的密钥长度，你需要修改代码。可选参数。
-
+其中`foo.example.com`是证书的CommonName，是唯一一个必须参数。<br />
+`dns_name`：DNS名称，指定DNS名称可以创建多域名证书，可选参数。<br />
+`cert_type`：证书类型，可以设置为`rsa`或`ecc`，设置为rsa时，将生成4096位RSA私钥，设置为ecc时，使用secp384r1曲线生成私钥。如果你希望使用不同的密钥长度，你需要修改代码。可选参数。<br />
 `dns_handler`：在上面步骤中创建的DNSHandler，如果你希望手动操作DNS记录，忽略此参数。可选参数。
 
 -----
 
-正常情况下，AcmeN会生成：
-
-密钥文件：`{域名}.{时间戳}.{密钥类型}.key`
-
+正常情况下，AcmeN会生成：<br />
+密钥文件：`{域名}.{时间戳}.{密钥类型}.key`<br />
 证书文件：`{域名}.{时间戳}.{密钥类型}.crt`
 
 如果DNS记录操作失败，或者你没有传入`dns_handler`参数，AcmeN会在需要添加/删除DNS记录时停下来，你需要根据日志提示信息设置或删除DNS记录。完成后按`Enter`键继续。另外，在设置DNS记录后，通知Acme服务器验证记录前，AcmeN会尝试解析DNS记录，如果经过数次尝试后解析失败，你同样需要根据日志提示，等待DNS记录正确扩散后按`Enter`键继续运行。
@@ -121,13 +127,12 @@ acme.get_cert_from_domain('foo.example.com', dns_name=['foo1.example.com', 'foo2
 acme.revoke_cert_by_private_key(cert_file, private_key_file, key_password='', reason=1)
 ```
 
-`cert_file`：需要吊销的证书文件，必须参数。
-
-`private_key_file`： 与证书文件对应的私钥，必须参数。
-
-`key_password`：保护私钥的密码，可选参数。
-
+`cert_file`：需要吊销的证书文件，必须参数。<br />
+`private_key_file`： 与证书文件对应的私钥，必须参数。<br />
+`key_password`：保护私钥的密码，可选参数。<br />
 `reason`：[RFC5280](https://tools.ietf.org/html/rfc5280#section-5.3.1)规定的吊销原因，默认值是1，表示私钥泄露。可选参数。
+
+使用私钥吊销证书时，`AcmeN`的`accountkey`参数可以不写。
 
 -----
 
@@ -137,12 +142,9 @@ acme.revoke_cert_by_private_key(cert_file, private_key_file, key_password='', re
 acme.revoke_cert_by_private_key(self, cert_file, private_key_file, key_password='', reason:=1):
 ```
 
-`cert_file`：需要吊销的证书文件，必须参数。
-
-`private_key_file`： 账户私钥文件，必须参数。
-
-`key_password`：保护私钥的密码，可选参数。
-
+`cert_file`：需要吊销的证书文件，必须参数。<br />
+`private_key_file`： 账户私钥文件，必须参数。<br />
+`key_password`：保护私钥的密码，可选参数。<br />
 `reason`：[RFC5280](https://tools.ietf.org/html/rfc5280#section-5.3.1)规定的吊销原因，默认值是1，表示私钥泄露。可选参数。
 
 在使用账户密钥吊销证书时，若Acme服务器缓存了对域名所有权的验证，则可以直接吊销。否则AcmeN会自动执行和签发证书相同的域名所有权验证流程。详情请见[RFC8555 Certificate Revocation](https://tools.ietf.org/html/rfc8555#section-7.6)
@@ -156,8 +158,7 @@ acme = AcmeN('old_key.key')
 acme.key_change(new_key_file, password='')
 ```
 
-`new_key_file`：新密钥文件
-
+`new_key_file`：新密钥文件<br />
 `password`：保护新密钥的密码
 
 ## 注销账户
@@ -166,7 +167,7 @@ acme.key_change(new_key_file, password='')
 acme.deactivate_account():
 ```
 
-**注意**：根据[RFC8555 Account Deactivation](https://tools.ietf.org/html/rfc8555#section-7.3.6)的规定，Acme**不提供**重新启用账户的方法。
+**注意：** 根据[RFC8555 Account Deactivation](https://tools.ietf.org/html/rfc8555#section-7.3.6)的规定，Acme**不提供**重新启用账户的方法。
 
 ## 关于Godaddy API的特别说明
 
@@ -212,3 +213,7 @@ def get_cert_from_domain(self, domain, dns_name: list = None, cert_type='rsa', d
 ```
 
 这是AcmeN使用Openssl生成证书私钥的逻辑，对于RSA证书，你可以将`'4096'`替换为你希望的长度，但注意不应低于2048。对于ECC证书，你可以将`'secp384r1'`替换为你希望使用的曲线。但是同样的，不恰当的曲线可能会引起程序异常，或者服务商拒绝签发证书，请在使用前进行测试。
+
+## 查找旧版本的文档
+
+目前我们暂未单独提供旧版本的文档，但文档与代码一同进行版本控制，你可以使用git检出之前的版本，在/docs目录下可找到对应的文档。目前文档使用[`mkdocs`](https://www.mkdocs.org)渲染，你可以使用mkdocs在/docs文件夹下构建html版本。

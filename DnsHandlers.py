@@ -45,12 +45,9 @@ class DNSHandlerBase(abc.ABC):
         pass
 
     @staticmethod
-    def get_subdomain(dns_domain):
-        return tld.get_tld(dns_domain, as_object=True, fix_protocol=True).subdomain
-
-    @staticmethod
-    def get_first_level_domain(dns_domain):
-        return tld.get_tld(dns_domain, as_object=True, fix_protocol=True).fld
+    def split_domain(dns_domain):
+        result = tld.get_tld(dns_domain, as_object=True, fix_protocol=True)
+        return result.subdomain, result.fld
 
     @staticmethod
     def is_acme_challenge(value):
@@ -86,8 +83,7 @@ class GoDaddyDNSHandler(DNSHandlerBase):
         return res.json()
 
     def set_record(self, dns_domain, value):
-        domain = self.get_first_level_domain(dns_domain)
-        name = self.get_subdomain(dns_domain)
+        name, domain = self.split_domain(dns_domain)
         records = self.__get_record(domain)
         records.append({'data': value, 'name': name, 'ttl': 600, 'type': 'TXT'})
         res = self.session.put(f'https://api.godaddy.com/v1/domains/{domain}/records/TXT/', headers=self.__header,
@@ -98,8 +94,7 @@ class GoDaddyDNSHandler(DNSHandlerBase):
 
     def del_record(self, dns_domain, value):
         """delete dns record with specific name and value"""
-        domain = self.get_first_level_domain(dns_domain)
-        name = self.get_subdomain(dns_domain)
+        name, domain = self.split_domain(dns_domain)
 
         records = self.__get_record(domain)
         records_to_delete = []
@@ -163,8 +158,7 @@ class TencentDNSHandler(DNSHandlerBase):
         return res.json()['data']['records']
 
     def set_record(self, dns_domain, value):
-        domain = self.get_first_level_domain(dns_domain)
-        name = self.get_subdomain(dns_domain)
+        name, domain = self.split_domain(dns_domain)
         data = {
             'Action': 'RecordCreate',
             'domain': domain,
@@ -179,8 +173,7 @@ class TencentDNSHandler(DNSHandlerBase):
         return res.status_code == 200 and res.json()['code'] == 0
 
     def del_record(self, dns_domain, value):
-        domain = self.get_first_level_domain(dns_domain)
-        name = self.get_subdomain(dns_domain)
+        name, domain = self.split_domain(dns_domain)
 
         records = self.__get_record(domain, name)
         records_to_delete = []
@@ -259,8 +252,7 @@ class CloudflareDNSHandler(DNSHandlerBase):
         return res.status_code == 200 and res.json()['result']['id'] == record_id
 
     def set_record(self, dns_domain, value):
-        domain = self.get_first_level_domain(dns_domain)
-        name = self.get_subdomain(dns_domain)
+        name, domain = self.split_domain(dns_domain)
         data = {
             'type': 'TXT',
             'name': name,
@@ -273,8 +265,7 @@ class CloudflareDNSHandler(DNSHandlerBase):
         return res.status_code == 200 and res.json()['success']
 
     def del_record(self, dns_domain, value):
-        domain = self.get_first_level_domain(dns_domain)
-        name = self.get_subdomain(dns_domain)
+        name, domain = self.split_domain(dns_domain)
         records = self.__get_record(domain, name)
         records_to_delete = []
         for record in records:

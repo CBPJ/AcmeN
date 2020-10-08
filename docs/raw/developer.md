@@ -10,25 +10,15 @@
 def set_record(self, dns_domain, value)
 ```
 
-`dns_domain`：要设置TXT记录的DNS域名，例如`_acme-challenge.foo.example.com`。
-
+`dns_domain`：要设置TXT记录的DNS域名，例如`_acme-challenge.foo.example.com`。<br />
 `value`：TXT记录的值。
 
-有时候你可能需要从域名中分离出First level domain以调用DNS服务商的API，`DNSHandlerBase`中提供了此方法，你可以在你实现的子类中调用：
+`DNSHandlerBase`中提供了分离域名和子域名的方法`split_domain()`，split_domain将返回`(subdomain, domain)`二元组。例如：
 
 ```python
-self.get_first_level_domain(dns_domain)
+result = self.split_domain(_acme-challenge.foo.example.com)
+# result == ('_acme-challenge.foo', 'example.com')
 ```
-
-对于上述情况，这将返回：`example.com`
-
-`DNSHandlerBase`中也提供了分离子域名的方法：
-
-```python
-self.get_subdomain(dns_doamin)
-```
-
-对于上述情况这将返回：`_acme-challenge.foo`
 
 ### del_record方法
 
@@ -36,11 +26,15 @@ self.get_subdomain(dns_doamin)
 def del_record(self, dns_domain, value)
 ```
 
-`dns_domain`：要删除TXT记录的DNS域名，例如`_acme-challenge.foo.example.com`。
-
+`dns_domain`：要删除TXT记录的DNS域名，例如`_acme-challenge.foo.example.com`。<br />
 `value`：TXT记录的值。
 
-在大多数DNS服务商的API中，删除一条记录并不需要提供这条记录的值。但是在默认DNSHandler实现中，会先从DNS服务商获取`dns_doamin`对应的记录值，并于`value`进行比较，相符时才会进行删除操作。我们建议你也使用类似的做法，以尽可能避免错误的DNS操作。
+`del_record`方法需要按以下规则删除记录：
+
+- 若未找到名称与dns_domain匹配的记录，返回False。
+- 若记录中只存在名称与dns_domain匹配且值与value匹配的记录，返回删除结果。
+- 若记录中只存在名称与dns_domain匹配但值与value不匹配的记录，返回False。
+- 若记录中既存在名称与dns_domain匹配且值与value匹配的记录，又存在名称匹配但值不匹配的记录，返回匹配记录的删除结果。
 
 ### session属性
 
@@ -48,7 +42,6 @@ def del_record(self, dns_domain, value)
 
 session的创建与关闭机制集成在DNSHandlerBase中，若外部没有传入session，DNSHandler会在第一次使用session时创建新的实例，并且在被删除时将其关闭。若session是外部传入的，DNSHandler不会关闭这个会话。
 
-若在传入session时，DNSHandler已经自行创建了session实例，则会先将自行创建的会话关闭，然后应用外部传入的会话。**注意：**这个操作不是线程安全的，若一个线程正在使用自行创建的session时，另一个线程传入session，会立即调用`session.close()`方法，当前正在进行的HTTP请求可能会失败。
+若在传入session时，DNSHandler已经自行创建了session实例，则会先将自行创建的会话关闭，然后应用外部传入的会话。**注意：** 这个操作不是线程安全的，若一个线程正在使用自行创建的session时，另一个线程传入session，会立即调用`session.close()`方法，当前正在进行的HTTP请求可能会失败。
 
 在默认实现中，AcmeN会在调用`self.__complete_challenge()`时设置DNSHandler的session属性，AcmeN与DNSHandler将共用同一个会话，在AcmeN退出时，会关闭这个会话。
-
