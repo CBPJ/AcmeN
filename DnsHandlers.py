@@ -1,7 +1,8 @@
-import json, re, time, secrets, hmac, base64, urllib.parse, abc
+import json, re, time, secrets, hmac, base64, urllib.parse, abc, typing
+from functools import lru_cache
 import requests, tld
 
-__all__ = ['DNSHandlerBase', 'DefaultDNSHandler', 'GoDaddyDNSHandler', 'TencentDNSHandler']
+__all__ = ['DNSHandlerBase', 'DefaultDNSHandler', 'GoDaddyDNSHandler', 'TencentDNSHandler', 'CloudflareDNSHandler']
 
 
 class DNSHandlerBase(abc.ABC):
@@ -179,3 +180,79 @@ class TencentDNSHandler(DNSHandlerBase):
         res = self.session.post(self.__path, data=req, headers={})
         return res.status_code == 200 and res.json()['code'] == 0
         pass
+
+
+class CloudflareDNSHandler(DNSHandlerBase):
+    def __init__(self, api_token='', api_key: typing.Tuple[str, str] = None):
+        """
+        :param api_token: api token
+        :param api_key: tuple of (api_key, email)
+        """
+        if not bool(api_token) ^ bool(api_key):
+            raise ValueError('one of api_token and (api_key, email) must be provided')
+        self.__headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
+        if api_token:
+            self.__headers['Authorization'] = 'Bearer {0}'.format(api_token)
+        elif api_key:
+            self.__headers['X-Auth-Key'] = api_key[0]
+            self.__headers['X-Auth-Email'] = api_key[1]
+
+    @lru_cache
+    def __get_zone_id(self, domain):
+        res = self.session.get(f'https://api.cloudflare.com/client/v4/zones', params={'match': 'all', 'name': domain},
+                               headers=self.__headers, )
+        if res.status_code != 200:
+            raise ValueError(res.status_code, res.content.decode('utf8'))
+        result = res.json()
+        if len(result['result']) == 0:
+            raise ValueError('domain not exist')
+        elif len(result['result']) != 1:
+            raise ValueError('server returns {0} domains'.format(len(result['result'])))
+        return result['result'][0]['id']
+
+    def __get_record(self, domain, name):
+        zone_id = self.__get_zone_id(domain)
+        dns_domain = '.'.join([name, domain])
+        res = self.session.get(f'https://api.cloudflare.com/client/v4/zones/{zone_id}/dns_records',
+                               headers=self.__headers, params={'match': 'all', 'name': dns_domain, 'type': 'TXT'})
+        if res.status_code != 200:
+            raise ValueError(res.status_code, res.content.decode('utf8'))
+
+        result = res.json()
+        return result['result']
+
+    def __del_record_by_id(self, record_id, domain):
+        zone_id = self.__get_zone_id(domain)
+        res = self.session.delete(f'https://api.cloudflare.com/client/v4/zones/{zone_id}/dns_records/{record_id}',
+                                  headers=self.__headers)
+        return res.status_code == 200 and res.json()['result']['id'] == record_id
+
+    def set_record(self, dns_domain, value):
+        domain = self.get_first_level_domain(dns_domain)
+        name = self.get_subdomain(dns_domain)
+        data = {
+            'type': 'TXT',
+            'name': name,
+            'content': value,
+            'ttl': 120
+        }
+        zone_id = self.__get_zone_id(domain)
+        res = self.session.post(f'https://api.cloudflare.com/client/v4/zones/{zone_id}/dns_records',
+                                headers=self.__headers, json=data)
+        return res.status_code == 200 and res.json()['success']
+
+    def del_record(self, dns_domain, value):
+        domain = self.get_first_level_domain(dns_domain)
+        name = self.get_subdomain(dns_domain)
+        records = self.__get_record(domain, name)
+
+        result = True
+        for record in records:
+            if record['name'] == dns_domain and record['content'] == value:
+                return self.__del_record_by_id(record['id'], domain)
+            elif record['name'] == dns_domain and value is None:
+                result &= self.__del_record_by_id(record['id'], domain)
+        return result
