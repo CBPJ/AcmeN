@@ -60,6 +60,8 @@
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#del_record">del_record方法</a>
     </li>
+    <li class="toctree-l3"><a class="reference internal" href="#session">session属性</a>
+    </li>
         </ul>
     </li>
     </ul>
@@ -67,6 +69,10 @@
                 </ul>
                 <ul>
                     <li class="toctree-l1"><a class="reference internal" href="../acknowledgment/">致谢</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../changelog/">ChangeLog</a>
                     </li>
                 </ul>
       </div>
@@ -107,22 +113,29 @@
 <h3 id="set_record">set_record方法<a class="headerlink" href="#set_record" title="Permanent link">&para;</a></h3>
 <pre><code class="language-python">def set_record(self, dns_domain, value)
 </code></pre>
-<p><code>dns_domain</code>：要设置TXT记录的DNS域名，例如<code>_acme-challenge.foo.example.com</code>。</p>
-<p><code>value</code>：TXT记录的值。</p>
-<p>有时候你可能需要从域名中分离出First level domain以调用DNS服务商的API，<code>DNSHandlerBase</code>中提供了此方法，你可以在你实现的子类中调用：</p>
-<pre><code class="language-python">self.get_first_level_domain(dns_domain)
+<p><code>dns_domain</code>：要设置TXT记录的DNS域名，例如<code>_acme-challenge.foo.example.com</code>。<br />
+<code>value</code>：TXT记录的值。</p>
+<p><code>DNSHandlerBase</code>中提供了分离域名和子域名的方法<code>split_domain()</code>，split_domain将返回<code>(subdomain, domain)</code>二元组。例如：</p>
+<pre><code class="language-python">result = self.split_domain(_acme-challenge.foo.example.com)
+# result == ('_acme-challenge.foo', 'example.com')
 </code></pre>
-<p>对于上述情况，这将返回：<code>example.com</code></p>
-<p><code>DNSHandlerBase</code>中也提供了分离子域名的方法：</p>
-<pre><code class="language-python">self.get_subdomain(dns_doamin)
-</code></pre>
-<p>对于上述情况这将返回：<code>_acme-challenge.foo</code></p>
 <h3 id="del_record">del_record方法<a class="headerlink" href="#del_record" title="Permanent link">&para;</a></h3>
 <pre><code class="language-python">def del_record(self, dns_domain, value)
 </code></pre>
-<p><code>dns_domain</code>：要删除TXT记录的DNS域名，例如<code>_acme-challenge.foo.example.com</code>。</p>
-<p><code>value</code>：TXT记录的值。</p>
-<p>在大多数DNS服务商的API中，删除一条记录并不需要提供这条记录的值。但是在默认DNSHandler实现中，会先从DNS服务商获取<code>dns_doamin</code>对应的记录值，并于<code>value</code>进行比较，相符时才会进行删除操作。我们建议你也使用类似的做法，以尽可能避免错误的DNS操作。</p>
+<p><code>dns_domain</code>：要删除TXT记录的DNS域名，例如<code>_acme-challenge.foo.example.com</code>。<br />
+<code>value</code>：TXT记录的值。</p>
+<p><code>del_record</code>方法需要按以下规则删除记录：</p>
+<ul>
+<li>若未找到名称与dns_domain匹配的记录，返回False。</li>
+<li>若记录中只存在名称与dns_domain匹配且值与value匹配的记录，返回删除结果。</li>
+<li>若记录中只存在名称与dns_domain匹配但值与value不匹配的记录，返回False。</li>
+<li>若记录中既存在名称与dns_domain匹配且值与value匹配的记录，又存在名称匹配但值不匹配的记录，返回匹配记录的删除结果。</li>
+</ul>
+<h3 id="session">session属性<a class="headerlink" href="#session" title="Permanent link">&para;</a></h3>
+<p>自v0.2.0起，DNSHandlerBase中添加了session属性，session属性是requests.Session的实例。</p>
+<p>session的创建与关闭机制集成在DNSHandlerBase中，若外部没有传入session，DNSHandler会在第一次使用session时创建新的实例，并且在被删除时将其关闭。若session是外部传入的，DNSHandler不会关闭这个会话。</p>
+<p>若在传入session时，DNSHandler已经自行创建了session实例，则会先将自行创建的会话关闭，然后应用外部传入的会话。<strong>注意：</strong> 这个操作不是线程安全的，若一个线程正在使用自行创建的session时，另一个线程传入session，会立即调用<code>session.close()</code>方法，当前正在进行的HTTP请求可能会失败。</p>
+<p>在默认实现中，AcmeN会在调用<code>self.__complete_challenge()</code>时设置DNSHandler的session属性，AcmeN与DNSHandler将共用同一个会话，在AcmeN退出时，会关闭这个会话。</p>
               
             </div>
           </div>
