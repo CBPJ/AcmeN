@@ -115,17 +115,21 @@
 </code></pre>
 <p><code>dns_domain</code>：要设置TXT记录的DNS域名，例如<code>_acme-challenge.foo.example.com</code>。<br />
 <code>value</code>：TXT记录的值。</p>
+<p>返回：(设置结果, 记录ID)<br />
+若DNS服务商不使用唯一ID标志一条解析记录，记录ID返回<code>None</code></p>
 <p><code>DNSHandlerBase</code>中提供了分离域名和子域名的方法<code>split_domain()</code>，split_domain将返回<code>(subdomain, domain)</code>二元组。例如：</p>
 <pre><code class="language-python">result = self.split_domain(_acme-challenge.foo.example.com)
 # result == ('_acme-challenge.foo', 'example.com')
 </code></pre>
 <h3 id="del_record">del_record方法<a class="headerlink" href="#del_record" title="Permanent link">&para;</a></h3>
-<pre><code class="language-python">def del_record(self, dns_domain, value)
+<pre><code class="language-python">def del_record(self, dns_domain, value, record_id)
 </code></pre>
 <p><code>dns_domain</code>：要删除TXT记录的DNS域名，例如<code>_acme-challenge.foo.example.com</code>。<br />
-<code>value</code>：TXT记录的值。</p>
+<code>value</code>：TXT记录的值。<br />
+<code>record_id</code>：记录ID，<code>set_record()</code>方法返回的值。</p>
 <p><code>del_record</code>方法需要按以下规则删除记录：</p>
 <ul>
+<li>若record_id不是None，直接删除此ID对应的记录，并返回结果。</li>
 <li>若未找到名称与dns_domain匹配的记录，返回False。</li>
 <li>若记录中只存在名称与dns_domain匹配且值与value匹配的记录，返回删除结果。</li>
 <li>若记录中只存在名称与dns_domain匹配但值与value不匹配的记录，返回False。</li>
