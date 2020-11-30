@@ -32,7 +32,7 @@ class AcmeN:
 
         # Program params
         self.__GET_HEADERS = {
-            'User-Agent': 'acmen/0.2.0',
+            'User-Agent': 'acmen/0.3.0',
             'Accept-Language': 'en'
         }
 
@@ -383,7 +383,7 @@ class AcmeN:
             dns_domain = "_acme-challenge.{0}".format(domain)
             self.__log.info('Setting DNS TXT record : \n{0}\n{1}'.format(dns_domain, key_digest64))
 
-            set_result = dns_operator.set_record(dns_domain, key_digest64)
+            set_result, record_id = dns_operator.set_record(dns_domain, key_digest64)
             if not set_result:
                 self.__log.warning('auto set dns record filed, set it manually, press ENTER to continue: \n{0}\n{1}'
                                    .format(dns_domain, key_digest64))
@@ -422,7 +422,7 @@ class AcmeN:
 
             self.__log.info('Deleting DNS TXT record : \n{0}\n{1}'.format(dns_domain, key_digest64))
             # TODO: Auto get tld
-            del_result = dns_operator.del_record(dns_domain, key_digest64)
+            del_result = dns_operator.del_record(dns_domain, key_digest64, record_id)
             if not del_result:
                 self.__log.warning('failed to del dns record, del it manually, press ENTER to continue')
                 input()

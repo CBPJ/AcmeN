@@ -13,6 +13,9 @@ def set_record(self, dns_domain, value)
 `dns_domain`：要设置TXT记录的DNS域名，例如`_acme-challenge.foo.example.com`。<br />
 `value`：TXT记录的值。
 
+返回：(设置结果, 记录ID)<br />
+若DNS服务商不使用唯一ID标志一条解析记录，记录ID返回`None`
+
 `DNSHandlerBase`中提供了分离域名和子域名的方法`split_domain()`，split_domain将返回`(subdomain, domain)`二元组。例如：
 
 ```python
@@ -23,14 +26,16 @@ result = self.split_domain(_acme-challenge.foo.example.com)
 ### del_record方法
 
 ```python
-def del_record(self, dns_domain, value)
+def del_record(self, dns_domain, value, record_id)
 ```
 
 `dns_domain`：要删除TXT记录的DNS域名，例如`_acme-challenge.foo.example.com`。<br />
-`value`：TXT记录的值。
+`value`：TXT记录的值。<br />
+`record_id`：记录ID，`set_record()`方法返回的值。
 
 `del_record`方法需要按以下规则删除记录：
 
+- 若record_id不是None，直接删除此ID对应的记录，并返回结果。
 - 若未找到名称与dns_domain匹配的记录，返回False。
 - 若记录中只存在名称与dns_domain匹配且值与value匹配的记录，返回删除结果。
 - 若记录中只存在名称与dns_domain匹配但值与value不匹配的记录，返回False。

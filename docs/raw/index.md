@@ -68,11 +68,13 @@ openssl genrsa -out account.key 4096
 
 ### 创建DNSHandler
 
-目前AcmeN内置了Godaddy、腾讯云、Cloudflare的DNSHandler。
+目前AcmeN内置了Godaddy、腾讯云、Cloudflare、阿里云的DNSHandler。
 
 使用Godaddy提供的DNS服务时，访问令牌以`sso-key`开头，创建`GodaddyDNSHandler`时传入即可。
 
-使用腾讯与提供的DNS服务时，访问令牌包括`secret_id`和`secret_key`两部分，创建`TencentDnsHandler`时传入：
+使用腾讯与提供的DNS服务时，访问令牌包括`secret_id`和`secret_key`两部分，创建`TencentDnsHandler`时传入。
+
+其他服务商：
 
 ```python
 from DnsHandlers import *
@@ -84,6 +86,8 @@ dns = GodaddyDNSHandler('sso-key *****')
 dns = CloudflareDNSHandler(api_token='<your_token>')
 # Cloudflare (APIKey):
 dns = CloudflareDNSHandler(api_key=('<your_api_key>', 'your_email'))
+# Aliyun:
+dns = AliyunDNSHandler('<your_accesskey_id>', '<your_accesskey_secret>')
 ```
 
 如果你希望手动设置/删除DNS记录，可以跳过此步骤。另外，你也可以实现自己的DNSHandler。
