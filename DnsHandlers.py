@@ -45,7 +45,7 @@ class DNSHandlerBase(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def del_record(self, dns_domain, value):
+    def del_record(self, dns_domain, value, record_id):
         pass
 
     @staticmethod
@@ -66,7 +66,7 @@ class DefaultDNSHandler(DNSHandlerBase):
         return False
         pass
 
-    def del_record(self, dns_domain, value):
+    def del_record(self, dns_domain, value, record_id):
         return False
         pass
 
@@ -93,10 +93,10 @@ class GoDaddyDNSHandler(DNSHandlerBase):
         res = self.session.put(f'https://api.godaddy.com/v1/domains/{domain}/records/TXT/', headers=self.__header,
                                json=records)
 
-        return res.status_code == 200
+        return res.status_code == 200, None
         pass
 
-    def del_record(self, dns_domain, value):
+    def del_record(self, dns_domain, value, record_id):
         """delete dns record with specific name and value"""
         name, domain = self.split_domain(dns_domain)
 
@@ -174,18 +174,23 @@ class TencentDNSHandler(DNSHandlerBase):
         }
         req, _, _ = self.__get_signature('POST', data)
         res = self.session.post(self.__path, data=req, headers={})
-        return res.status_code == 200 and res.json()['code'] == 0
+        result = res.json()
+        succeed = bool(res.status_code == 200 and result['code'] == 0)
+        return succeed , result['data']['record']['id'] if succeed else None
 
-    def del_record(self, dns_domain, value):
+    def del_record(self, dns_domain, value, record_id):
         name, domain = self.split_domain(dns_domain)
 
-        records = self.__get_record(domain, name)
         records_to_delete = []
-        for record in records:
-            if record['name'] == name and record['value'] == value:
-                records_to_delete.append(record['id'])
-            elif (record['name'] == name) and (value is None) and (self.is_acme_challenge(record['value'])):
-                records_to_delete.append(record['id'])
+        if record_id is not None:
+            records_to_delete.append(record_id)
+        else:
+            records = self.__get_record(domain, name)
+            for record in records:
+                if record['name'] == name and record['value'] == value:
+                    records_to_delete.append(record['id'])
+                elif (record['name'] == name) and (value is None) and (self.is_acme_challenge(record['value'])):
+                    records_to_delete.append(record['id'])
 
         if len(records_to_delete) == 0:
             return False
@@ -266,17 +271,23 @@ class CloudflareDNSHandler(DNSHandlerBase):
         zone_id = self.__get_zone_id(domain)
         res = self.session.post(f'https://api.cloudflare.com/client/v4/zones/{zone_id}/dns_records',
                                 headers=self.__headers, json=data)
-        return res.status_code == 200 and res.json()['success']
+        result = res.json()
+        succeed = bool(res.status_code == 200 and result['success'])
+        return succeed, result['result']['id'] if succeed else None
 
-    def del_record(self, dns_domain, value):
+    def del_record(self, dns_domain, value, record_id):
         name, domain = self.split_domain(dns_domain)
-        records = self.__get_record(domain, name)
         records_to_delete = []
-        for record in records:
-            if record['name'] == dns_domain and record['content'] == value:
-                records_to_delete.append(record['id'])
-            elif (record['name'] == dns_domain) and (value is None) and (self.is_acme_challenge(record['content'])):
-                records_to_delete.append(record['id'])
+        if record_id is not None:
+            records_to_delete.append(record_id)
+        else:
+            records = self.__get_record(domain, name)
+            for record in records:
+                if record['name'] == dns_domain and record['content'] == value:
+                    records_to_delete.append(record['id'])
+                elif (record['name'] == dns_domain) and (value is None) and (self.is_acme_challenge(record['content'])):
+                    records_to_delete.append(record['id'])
+
         if len(records_to_delete) == 0:
             return False
 
@@ -347,19 +358,23 @@ class AliyunDNSHandler(DNSHandlerBase):
         }
         _, _, param = self.__get_signature(data)
         res = self.session.get(f'{self.__path}?{param}')
-        return res.status_code == 200
+        succeed = bool(res.status_code == 200)
+        return succeed, res.json()['RecordId'] if succeed else None
         pass
 
-    def del_record(self, dns_domain, value):
+    def del_record(self, dns_domain, value, record_id):
         name, domain = self.split_domain(dns_domain)
 
-        records = self.__get_record(domain, name)
         records_to_delete = []
-        for record in records:
-            if record['RR'] == name and record['Value'] == value:
-                records_to_delete.append(record['RecordId'])
-            elif (record['RR'] == name) and (value is None) and (self.is_acme_challenge(record['Value'])):
-                records_to_delete.append(record['RecordId'])
+        if record_id is not None:
+            records_to_delete.append(record_id)
+        else:
+            records = self.__get_record(domain, name)
+            for record in records:
+                if record['RR'] == name and record['Value'] == value:
+                    records_to_delete.append(record['RecordId'])
+                elif (record['RR'] == name) and (value is None) and (self.is_acme_challenge(record['Value'])):
+                    records_to_delete.append(record['RecordId'])
 
         if len(records_to_delete) == 0:
             return False
