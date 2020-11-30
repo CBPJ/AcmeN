@@ -1,8 +1,12 @@
-import re, time, secrets, hmac, base64, urllib.parse, abc, typing, binascii
+import re, time, secrets, hmac, base64, abc, typing, binascii, datetime, uuid
+from urllib.parse import quote
 from functools import lru_cache
 import requests, tld
 
-__all__ = ['DNSHandlerBase', 'DefaultDNSHandler', 'GoDaddyDNSHandler', 'TencentDNSHandler', 'CloudflareDNSHandler']
+__all__ = [
+    'DNSHandlerBase', 'DefaultDNSHandler', 'GoDaddyDNSHandler', 'TencentDNSHandler', 'CloudflareDNSHandler',
+    'AliyunDNSHandler'
+]
 
 
 class DNSHandlerBase(abc.ABC):
@@ -142,7 +146,7 @@ class TencentDNSHandler(DNSHandlerBase):
         signature = base64.b64encode(signature)
 
         result.update(Signature=signature)
-        return result, signature, '{0}&Signature={1}'.format(param, urllib.parse.quote(signature))
+        return result, signature, '{0}&Signature={1}'.format(param, quote(signature))
 
     def __get_record(self, domain, name):
         data = {
@@ -280,3 +284,98 @@ class CloudflareDNSHandler(DNSHandlerBase):
         for record_id in records_to_delete:
             result &= self.__del_record_by_id(record_id, domain)
         return result
+
+
+class AliyunDNSHandler(DNSHandlerBase):
+    def __init__(self, access_key_id, access_key_secret):
+        self.__id = access_key_id
+        self.__key = access_key_secret
+        self.__path = 'https://alidns.aliyuncs.com'
+
+    def __get_signature(self, data: dict):
+        t = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc).replace(microsecond=0)
+        result = {
+            'Format': 'JSON',
+            'Version': '2015-01-09',
+            'AccessKeyId': self.__id,
+            'SignatureMethod': 'HMAC-SHA1',
+            'Timestamp': re.sub(r'\+00:00', 'Z', t.isoformat()),
+            'SignatureNonce': str(uuid.uuid4()),
+            'SignatureVersion': '1.0'
+        }
+        result.update(data)
+        param = ['{0}={1}'.format(quote(key), quote(result[key])) for key in sorted(result)]
+        param = '&'.join(param)
+
+        string_to_sign = param.replace('%3D', '=')
+        string_to_sign = f'GET&%2F&{quote(string_to_sign)}'
+
+        signature = hmac.new(f'{self.__key}&'.encode('utf8'), string_to_sign.encode('utf8'), 'sha1').digest()
+        signature = base64.b64encode(signature)
+
+        result['Signature'] = quote(signature)
+        param = ['{0}={1}'.format(key, result[key]) for key in sorted(result)]  # add Signature to proper position
+        param = '&'.join(param)
+        return result, signature, param
+
+    def __get_record(self, domain, name):
+        data = {
+            'Action': 'DescribeDomainRecords',
+            'DomainName': domain,
+            'PageSize': '500',
+            'KeyWord': name,
+            'TypeKeyword': 'TXT',
+            'SearchMode': "EXACT"
+        }
+
+        _, _, param = self.__get_signature(data)
+        res = self.session.get(f'{self.__path}?{param}')
+        if res.status_code != 200:
+            raise ValueError(res.status_code, res.content.decode('utf8'))
+        return res.json()['DomainRecords']['Record']
+
+    def set_record(self, dns_domain, value):
+        name, domain = self.split_domain(dns_domain)
+        data = {
+            'Action': 'AddDomainRecord',
+            'DomainName': domain,
+            'RR': name,
+            'Type': 'TXT',
+            'Value': value,
+            'Line': 'default',
+            'ttl': '600'
+        }
+        _, _, param = self.__get_signature(data)
+        res = self.session.get(f'{self.__path}?{param}')
+        return res.status_code == 200
+        pass
+
+    def del_record(self, dns_domain, value):
+        name, domain = self.split_domain(dns_domain)
+
+        records = self.__get_record(domain, name)
+        records_to_delete = []
+        for record in records:
+            if record['RR'] == name and record['Value'] == value:
+                records_to_delete.append(record['RecordId'])
+            elif (record['RR'] == name) and (value is None) and (self.is_acme_challenge(record['Value'])):
+                records_to_delete.append(record['RecordId'])
+
+        if len(records_to_delete) == 0:
+            return False
+
+        result = True
+        for record_id in records_to_delete:
+            result &= self.__del_record_by_id(record_id)
+        return result
+        pass
+
+    def __del_record_by_id(self, record_id):
+        data = {
+            'Action': 'DeleteDomainRecord',
+            'RecordId': record_id
+        }
+        _, _, param = self.__get_signature(data)
+        res = self.session.get(f'{self.__path}?{param}')
+        return res.status_code == 200
+        pass
