@@ -2,29 +2,44 @@ import subprocess, json, sys, base64, binascii, time, hashlib, re, logging, os, 
 
 import requests
 import dns.resolver
+from jwcrypto import jws, jwk
 from DnsHandlers import *
 
 
 class AcmeN:
-    def __init__(self, account_key_file=None, account_key_password='', contact=None):
+    def __init__(self, account_key_file=None, account_key_password='', contact=None, ca='LETSENCRYPT'):
         # logger
         self.__log = logging.getLogger()
+        ca_dict = {
+            'LETSENCRYPT': 'https://acme-v02.api.letsencrypt.org/directory',
+            'BUYPASS': 'https://api.buypass.com/acme/directory',
+            'ZEROSSL': 'https://acme.zerossl.com/v2/DV90',
+            'LETSENCRYPT_STAGING': 'https://acme-staging-v02.api.letsencrypt.org/directory',
+            'BUYPASS_STAGING': 'https://api.test4.buypass.no/acme/directory'
+        }
 
-        # ACME params
-        # production
-        self.__ACME_DIRECTORY = 'https://acme-v02.api.letsencrypt.org/directory'
-        # self.__ACME_DIRECTORY = 'https://api.buypass.com/acme/directory'
-
-        # staging
-        # self.__ACME_DIRECTORY = 'https://acme-staging-v02.api.letsencrypt.org/directory'
-        # self.__ACME_DIRECTORY = 'https://api.test4.buypass.no/acme/directory'
+        try:
+            self.__ACME_DIRECTORY = ca_dict[ca]
+        except KeyError:
+            raise ValueError(f'ca should be one of {str(ca_dict.keys())}, "{ca}" is invalid.')
 
         self.__CERTIFICATE_FORMAT = 'application/pem-certificate-chain'
 
         # Account params
         self.__CONTACT = contact
-        self.__ACCOUNT_KEY_FILE = account_key_file
-        self.__ACCOUNT_KEY_PASSWORD = account_key_password
+        if account_key_file:
+            # TODO: error handling
+            self.__log.info('Loading account key.')
+            with open(account_key_file, 'rb') as file:
+                key = file.read()
+            if account_key_password:
+                self.__ACCOUNT_KEY = jwk.JWK.from_pem(key, password=account_key_password)
+
+            else:
+                self.__ACCOUNT_KEY = jwk.JWK.from_pem(key)
+        else:
+            self.__log.warning('No account key specified, skipping key loading.')
+            self.__ACCOUNT_KEY = None
 
         # DNS params
         self.__DNS_TTL = 20
@@ -199,27 +214,48 @@ class AcmeN:
     def __send_signed_request(self, url, payload, sign_key=None, key_password='', http_headers=None):
         """Sends signed requests to ACME server."""
         if sign_key:
-            protected, _ = self.__read_key(sign_key, key_password)
+            with open(sign_key, 'rb') as file:
+                key = file.read()
+            key = jwk.JWK.from_pem(key, key_password)
         else:
-            protected = self.__JWS_HEADERS.copy()
+            key = self.__ACCOUNT_KEY
 
-        protected["nonce"] = self.__get_nonce()
-        protected["url"] = url
-        protected['kid'] = self.__kid
+        ecc_alg = {
+            'P-256': 'ES256',
+            'P-384': 'ES384',
+            'P-521': 'ES521'
+        }
+        if key.key_type == 'RSA':
+            alg = 'RS256'
+        elif key.key_type == 'EC':
+            alg = ecc_alg[key.key_curve]
+        else:
+            raise ValueError(f'Unsupported key type:{key.key_type}, RSA and ECC are supported.')
+
+        protected = {
+            'alg': alg,
+            'jwk': key.export(private_key=False, as_dict=True),
+            'nonce': self.__get_nonce(),
+            'url': url,
+            'kid': self.__kid
+        }
+        # the kid of the account key produced by the jwcrypto lib is unnecessary.
+        # it's not the same thing as the kid below.
+        del protected['jwk']['kid']
+
         if url == self.__DIRECTORY["newAccount"] or (url == self.__DIRECTORY['revokeCert'] and sign_key is not None):
             del protected["kid"]
         else:
             del protected["jwk"]
 
-        payload64 = '' if payload == '' else self.__b64(json.dumps(payload).encode("utf8"))
-        protected64 = self.__b64(json.dumps(protected).encode("utf8"))
+        if not isinstance(payload, str):
+            payload = json.dumps(payload)
 
-        jose = {
-            "protected": protected64, "payload": payload64,
-            "signature": self.__sign_request(protected, payload, sign_key, key_password)
-        }
+        s = jws.JWS(payload)
+        s.add_signature(key, protected=protected)
+
         self.__log.debug('sending signed request to: {0}, with payload: {1}'.format(url, json.dumps(payload)))
-        response = requests.post(url, json=jose, headers=http_headers or self.__POST_HEADER)
+        response = requests.post(url, data=s.serialize(), headers=http_headers or self.__POST_HEADER)
         self.__nonce = response.headers.get('Replay-Nonce', None) or self.__nonce
         try:
             return response, response.json()
@@ -288,9 +324,9 @@ class AcmeN:
                     domains.add(san[4:])
         return domains
 
-    def __register_new_account(self):
+    def _register_new_account(self):
         """Register new account and return kid"""
-        self.__log.info('Register ACME Account')
+        self.__log.info('Registering ACME Account')
         account_request = {}
         tos = self.__DIRECTORY.get('meta', {}).get('termsOfService', '')
         if tos != '':
@@ -461,7 +497,7 @@ class AcmeN:
         return response.text
 
     def __get_cert(self, csr_pem, csr_der, dns_handler: DNSHandlerBase):
-        kid, account_info = self.__register_new_account()
+        kid, account_info = self._register_new_account()
 
         if self.__CONTACT and set(account_info['contact']) != set(self.__CONTACT):
             self.__update_contact_info(kid, self.__CONTACT)
@@ -505,7 +541,7 @@ class AcmeN:
         sys.stdout.write(cert)
 
     def revoke_cert_by_account(self, cert_file, reason: int = 0, dns_handler: DNSHandlerBase = None):
-        self.__register_new_account()
+        self._register_new_account()
         self.__log.info('Revoking certificate')
         cert_der = self.__openssl('x509', ['-in', cert_file, '-outform', 'der'])
         cert_der64 = self.__b64(cert_der)
@@ -545,7 +581,7 @@ class AcmeN:
         self.__log.info('Certificate Revoked')
 
     def key_change(self, new_key_file, password: str = ''):
-        self.__register_new_account()  # to get kid
+        self._register_new_account()  # to get kid
         protected, _ = self.__read_key(new_key_file, password)
         protected['url'] = self.__DIRECTORY['keyChange']
         payload = {
@@ -568,7 +604,7 @@ class AcmeN:
         self.__log.info('key Changed')
 
     def deactivate_account(self):
-        self.__register_new_account()
+        self._register_new_account()
         payload = {
             'status': 'deactivated'
         }
