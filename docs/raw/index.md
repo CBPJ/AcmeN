@@ -13,7 +13,7 @@ AcmeN实现了RFC8555中描述的以下特性：
 - 签发证书
 - 吊销证书
 
-**注意：**我们尚未对AcmeN进行完整的测试，如需在生产环境中使用，你需要自行测试其可靠性。另外，AcmeN仍在开发阶段，`v0.*.*`版本无法严格保证API向后兼容性。
+**注意：** 我们尚未对AcmeN进行完整的测试，如需在生产环境中使用，你需要自行测试其可靠性。另外，AcmeN仍在开发阶段，`v0.*.*`版本无法严格保证API向后兼容性。
 
 ## 安装依赖
 
@@ -63,6 +63,18 @@ acme = AcmeN('account.key', account_key_password='<your_password>', contact=['ma
 ```bash
 openssl genrsa -out account.key 4096
 ```
+
+-----
+
+### 指定证书签发机构(CA)
+
+AcmeN目前内置了来自3个CA机构的5个服务器。三个CA机构是：[Let's Encrypt](https://letsencrypt.org)、[BuyPass](https://www.buypass.com)、[ZeroSSL](https://zerossl.com/)。
+
+```python
+acme = AcmeN('account.key', ca='LETSENCRYPT')
+```
+
+ca的默认值是`LETSENCRYPT`，有效值是：`LETSENCRYPT`、`BUYPASS`、`ZEROSSL`、`LETSENCRYPT_STAGING`、`BUYPASS_STAGING`。
 
 -----
 
