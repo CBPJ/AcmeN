@@ -1,9 +1,74 @@
-import subprocess, json, sys, base64, binascii, time, hashlib, re, logging, os, uuid, functools
+import subprocess, json, sys, base64, binascii, time, hashlib, re, logging, os, uuid, functools, collections
 
 import requests
 import dns.resolver
 from jwcrypto import jws, jwk
 from DnsHandlers import *
+
+__version__ = '0.3.0'
+
+
+class AcmeNetIO:
+    def __init__(self, keyfile, password=None, nonce_url=None, session=None):
+        """This object performs ACME requests.
+
+        :param keyfile: The pem format private key used for sign ACME requests.
+        :param password: Optional, the password of the keyfile.
+        :param nonce_url: Optional, the URL to get Replay-Nonce (the newNonce field in the RFC8555, section 7.1.1).
+                          It could be omitted when initializing the AcmeNetIO object, but the nonce_url field of the
+                          AcmeNetIO object must be provided before requesting a new nonce.
+        :param session: Optional, a requests.Session object shared by other code.
+                        If omitted, a new session will be created.
+        """
+
+        self.nonce_url = nonce_url
+        self._nonce = ''
+
+        # set up session
+        headers = {
+            'User-Agent': f'acmen/{__version__}',
+            'Accept-Language': 'en',
+            'Content-Type': 'application/jose+json'
+        }
+        if session:
+            self.session = session
+        else:
+            self.session = requests.Session()
+            self.session.headers.update(headers)
+
+        # read keyfile
+        with open(keyfile, 'rb') as file:
+            data = file.read()
+        if password:
+            self.__key = jwk.JWK.from_pem(data, password)
+        else:
+            self.__key = jwk.JWK.from_pem(data)
+        pass
+
+    def _get_nonce(self):
+        """Get a Replay-Nonce, either comes from the last response or request a new one.
+        
+        :raises TypeError: If self.nonce_url is not a string.
+        :raises RuntimeError: If the http status code indicates the request is failed.
+        TODO: according to RFC8555 section 6.5.1, client MUST check the validity of the Replay-Nonce.
+        """
+
+        if self._nonce:
+            result = self._nonce
+            self._nonce = None
+            return result
+
+        if not isinstance(self.nonce_url, str):
+            raise TypeError(f'nonce_url is not provided or is not a str. type(nonce_url): {type(self.nonce_url)}')
+
+        # According to RFC8555 section 7.2, both HEAD and GET will work.
+        # But I don't think the Content-Type header should present when using the HEAD or GET method.
+        # But it works for now.
+        # TODO: Delete Content-Type header from HEAD or GET request.
+        res = self.session.head(self.nonce_url)
+        if not res.ok:
+            raise RuntimeError(f'Failed to get nonce: {res.status_code} {res.reason}, {res.text}')
+        return res.headers['Replay-Nonce']
 
 
 class AcmeN:
