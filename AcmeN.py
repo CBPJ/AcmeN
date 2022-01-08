@@ -19,15 +19,16 @@ class SupportedCA(enum.Enum):
 
 
 class AcmeAction(enum.Enum):
-    NewNonce = 'newNonce'
-    NewAccount = 'newAccount'
-    NewOrder = 'newOrder'
-    NewAuthz = 'newAuthz'
-    RevokeCertByAccountKey = 'revokeCert'
-    RevokeCertByCertKey = 'revokeCert'
-    KeyChangeInner = 'keyChange'
+    NewNonce = enum.auto()
+    NewAccount = enum.auto()
+    NewOrder = enum.auto()
+    NewAuthz = enum.auto()
+    RevokeCertByAccountKey = enum.auto()
+    RevokeCertByCertKey = enum.auto()
+    KeyChangeInner = enum.auto()
     # This is used by sign_request function to distinguish two sign processes in the keyChange action.
-    KeyChangeOuter = 'keyChange'
+    KeyChangeOuter = enum.auto()
+    DeactivateAccount = enum.auto()
 
 
 class AcmeNetIO:
@@ -96,10 +97,19 @@ class AcmeNetIO:
                                    f'you could find them at {self.__directory["meta"]["termsOfService"]}')
                 # TODO: Add a property to indicate whether the CA has a TOS.
             if 'externalAccountRequired' in self.__directory['meta'] \
-                    and self.__directory['meta']['externalAccountRequired'] is True :
+                    and self.__directory['meta']['externalAccountRequired'] is True:
                 self.__log.warning('This server requires an external account.')
 
         return self.__directory
+
+    @property
+    def pubkey(self) -> dict:
+        """Get the public key in the standard json format."""
+        result = self.__key.export_public(as_dict=True)
+        # The kid of the account key produced by the jwcrypto lib is unnecessary.
+        # It's not the same thing as the kid of an ACME account.
+        del result['kid']
+        return result
 
     def _get_nonce(self):
         """Get a Replay-Nonce, either comes from the last response or request a new one.
@@ -117,23 +127,42 @@ class AcmeNetIO:
         # But I don't think the Content-Type header should present when using the HEAD or GET method.
         # But it works for now.
         # TODO: Delete Content-Type header from HEAD or GET request.
-        res = self.session.head(self.directory[AcmeAction.NewNonce.value])
+        res = self.session.head(self._get_url(AcmeAction.NewNonce))
         if not res.ok:
             raise RuntimeError(f'Failed to get nonce: {res.status_code} {res.reason}, {res.text}')
         return res.headers['Replay-Nonce']
 
-    def sign_request(self, payload, url, append_nonce=True, use_kid=True) -> str:
+    def _get_url(self, action: AcmeAction):
+        """Query the request url from directory by the action.
+
+        :param action: The AcmeAction.
+        :return: The request url.
+        """
+        if action == AcmeAction.NewNonce:
+            return self.directory['newNonce']
+        elif action == AcmeAction.NewAccount:
+            return self.directory['newAccount']
+        elif action == AcmeAction.NewOrder:
+            return self.directory['newOrder']
+        elif action == AcmeAction.NewAuthz:
+            return self.directory['newAuthz']
+        elif action == AcmeAction.RevokeCertByAccountKey:
+            return self.directory['revokeCert']
+        elif action == AcmeAction.RevokeCertByCertKey:
+            return self.directory['revokeCert']
+        elif action == AcmeAction.KeyChangeInner:
+            return self.directory['keyChange']
+        elif action == AcmeAction.KeyChangeOuter:
+            return self.directory['keyChange']
+        elif action == AcmeAction.DeactivateAccount:
+            return self.query_kid()
+
+    def sign_request(self, payload, action: AcmeAction) -> str:
         """Sign a request and return the jws string.
 
         :param payload: The payload of the jws. If the payload is a string, it will be used directly for the signing
                         process. If the payload is a dict, it will be serialized.
-        :param url: The request url, this will also be included in the protected header.
-        :param append_nonce: whether append nonce to the protected header. Currently, this is only useful when signing
-                             the "inner JWS" of the key rollover request. For other requests, append_nonce should
-                             remain True.
-        :param use_kid: Use the 'kid' in protected header to indicate an account instead of the 'jwk'.
-                        Only set this to False when sending a newAccount request or revokeCert request authenticated by
-                        the certificate key.
+        :param action: The reason of signing this payload, used for constructing the protected header.
         :return: The signed and serialized JWS string.
         :raises TypeError: If the payload is neither a string nor a dict.
         :raises ValueError: If the given account key is neither an RSA key nor an ECC key
@@ -143,6 +172,7 @@ class AcmeNetIO:
         if isinstance(payload, dict):
             payload = json.dumps(payload)
         elif isinstance(payload, str):
+            # TODO: Validate the payload. It could be an empty string only when sending a POST-as-GET string.
             pass
         else:
             raise TypeError('"payload" must be a string or a dict.')
@@ -162,34 +192,53 @@ class AcmeNetIO:
 
         protected = {
             'alg': alg,
-            'url': url
+            'url': self._get_url(action)
         }
 
-        if append_nonce:
+        if action != AcmeAction.KeyChangeInner:
             protected['nonce'] = self._get_nonce()
 
-        if use_kid:
+        # only the newAccount and revokeCert by a certificate key use the jwk header.
+        # besides, the inner jws of a changeKey request also use the jwk header.
+        if action == AcmeAction.NewAccount or action == AcmeAction.RevokeCertByCertKey \
+                or action == AcmeAction.KeyChangeInner:
+            protected['jwk'] = self.pubkey
+        else:
             protected['kid'] = self.query_kid()
-        else:  # use jwk
-            protected['jwk'] = self.__key.export(private_key=False, as_dict=True)
-            # The kid of the account key produced by the jwcrypto lib is unnecessary.
-            # It's not the same thing as the kid above.
-            del protected['jwk']['kid']
 
         s = jws.JWS(payload=payload)
         s.add_signature(self.__key, protected=protected)
         return s.serialize()
 
-    def send_request(self, url, payload) -> AcmeResponse:
+    def send_request(self, payload, action: AcmeAction) -> AcmeResponse:
         """
         sign and send an ACME request.
 
-        :param url: the request url, this will also be included in the protected header.
-        :param payload: the payload dict of the jws. it must be None or empty string for POST-as-GET requests.
+        :param payload: The payload dict of the jws. it must be None or empty string for POST-as-GET requests.
+        :param action: The reason of signing this payload, used for determining the request URL
+                       and constructing the protected header.
         :return: an AcmeResponse object representing the server response.
+        :raises RuntimeError: If the server returns a non-successful status code(<200 or >=400).
         """
+        content = self.sign_request(payload, action)
+        r = self.session.post(self._get_url(action), data=content)
+        result = AcmeResponse(r.status_code, r.headers, r.json())
 
-        pass
+        # every successful response will contain a Replay-Nonce header, RFC8555 section 6.5.
+        # besides, a badNonce error will also contain a Replay-Nonce (RFC8555 section 6.5), but let's just ignored it.
+        if r.ok:
+            # TODO: check the validity of the Replay-Nonce, duplicated with the todo in _get_nonce.
+            # Maybe I should make the nonce a property.
+            self._nonce = r.headers['Replay-Nonce']
+
+            # Replay-Nonce could be transparent to the higher layer code.
+            # By doing this, the headers of the response object is changed.
+            # But, since the response object is no longer used, it shouldn't cause any trouble.
+            del r.headers['Replay-Nonce']
+        else:
+            raise RuntimeError(f'ACME request failed: {r.status_code} {r.reason}, {r.text}')
+
+        return result
 
     def query_kid(self) -> str:
         """Query the kid of the given keyfile.
@@ -197,7 +246,12 @@ class AcmeNetIO:
         :return: The URL of the account.
         :raise RuntimeError: If there is no account corresponding to the given key.
         """
-        pass
+        r = self.send_request({'onlyReturnExisting': True}, AcmeAction.NewAccount)
+        if r.code == 200:
+            return r.headers['Location']
+        else:
+            # We shouldn't reach here. RFC8555 doesn't specify a status code between 201-399 for this case.
+            raise RuntimeError(f'Request failed: unknown error. {r.code}, {r.content}')
 
 
 class AcmeN:
