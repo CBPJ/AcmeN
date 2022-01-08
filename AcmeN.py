@@ -55,7 +55,7 @@ class AcmeNetIO:
 
         # set up session
         headers = {
-            'User-Agent': f'acmen/{__version__}',
+            'User-Agent': f'AcmeN/{__version__}',
             'Accept-Language': 'en',
             'Content-Type': 'application/jose+json'
         }

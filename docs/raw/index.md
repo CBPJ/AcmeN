@@ -1,6 +1,6 @@
 # AcmeN
 
-[RFC8555](https://tools.ietf.org/html/rfc8555)自动证书管理环境Python客户端
+[RFC8555](https://tools.ietf.org/html/rfc8555) 自动证书管理环境Python客户端。
 
 ## 特性
 
@@ -13,7 +13,7 @@ AcmeN实现了RFC8555中描述的以下特性：
 - 签发证书
 - 吊销证书
 
-**注意：** 我们尚未对AcmeN进行完整的测试，如需在生产环境中使用，你需要自行测试其可靠性。另外，AcmeN仍在开发阶段，`v0.*.*`版本无法严格保证API向后兼容性。
+**注意：** 我们尚未对AcmeN进行完整的测试，如需在生产环境中使用，你需要自行测试其可靠性。另外，AcmeN仍在开发阶段，`v0.*.*`版本无法保证API向后兼容性。
 
 ## 安装依赖
 
@@ -29,11 +29,11 @@ pip install -r requirements.txt
 
 然后打开`main.py`按照需要修改其中的代码并执行。
 
-另外，AcmeN依赖[OpenSSL](https://www.openssl.org/)才能运行，请确保openssl在你的`PATH`变量中，如果你使用windows且没有安装openssl，你可以在[Release](https://github.com/CBPJ/AcmeN/releases/)页面下载我们编译好的版本。对于Linux，你可以使用软件包管理器安装。
+另外，AcmeN依赖[OpenSSL](https://www.openssl.org/) 才能运行，请确保openssl在你的`PATH`变量中，如果你使用windows且没有安装openssl，你可以在[Release](https://github.com/CBPJ/AcmeN/releases/) 页面下载我们编译好的版本。对于Linux，你可以使用软件包管理器安装。
 
 ## 签发证书
 
-AcmeN使用RFC8555规定的`dns-01`验证方式验证域名控制权，并通过调用DNS服务商的API更新或删除DNS记录。目前，AcmeN集成了Godaddy和腾讯云的API客户端。以Godaddy为例，[`main.py`](https://github.com/CBPJ/AcmeN/blob/master/main.py)中给出了签发证书的过程:
+AcmeN使用RFC8555规定的`dns-01`验证方式验证域名控制权，并通过调用DNS服务商的API更新或删除DNS记录。目前，AcmeN集成了Godaddy和腾讯云的API客户端。以Godaddy为例，[`main.py`](https://github.com/CBPJ/AcmeN/blob/master/main.py) 中给出了签发证书的过程:
 
 ```python
 import logging
@@ -195,7 +195,7 @@ acme.deactivate_account():
 
 ### 使用其他ACME服务商
 
-默认情况下，AcmeN使用[Let's Encrypt](https://letsencrypt.org/)提供的证书签发服务。但同时，AcmeN也内置了[buypass](https://www.buypass.com/ssl/products/acme)的服务器地址。如需切换服务商，在`AcmeN.py`中找到：
+默认情况下，AcmeN使用[Let's Encrypt](https://letsencrypt.org/) 提供的证书签发服务。但同时，AcmeN也内置了[buypass](https://www.buypass.com/ssl/products/acme) 的服务器地址。如需切换服务商，在`AcmeN.py`中找到：
 
 ```python
 # ACME params
