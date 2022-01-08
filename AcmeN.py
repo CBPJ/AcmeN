@@ -1,4 +1,4 @@
-import subprocess, json, sys, base64, binascii, time, hashlib, re, logging, os, uuid, functools, collections
+import subprocess, json, sys, base64, binascii, time, hashlib, re, logging, os, uuid, functools, collections, enum
 
 import requests
 import dns.resolver
@@ -7,21 +7,49 @@ from DnsHandlers import *
 
 __version__ = '0.3.0'
 
+AcmeResponse = collections.namedtuple('AcmeResponse', ('code', 'headers', 'content'))
+
+
+class SupportedCA(enum.Enum):
+    LETSENCRYPT = 'https://acme-v02.api.letsencrypt.org/directory'
+    BUYPASS = 'https://api.buypass.com/acme/directory'
+    ZEROSSL = 'https://acme.zerossl.com/v2/DV90'
+    LETSENCRYPT_STAGING = 'https://acme-staging-v02.api.letsencrypt.org/directory'
+    BUYPASS_STAGING = 'https://api.test4.buypass.no/acme/directory'
+
+
+class AcmeAction(enum.Enum):
+    NewNonce = 'newNonce'
+    NewAccount = 'newAccount'
+    NewOrder = 'newOrder'
+    NewAuthz = 'newAuthz'
+    RevokeCertByAccountKey = 'revokeCert'
+    RevokeCertByCertKey = 'revokeCert'
+    KeyChangeInner = 'keyChange'
+    # This is used by sign_request function to distinguish two sign processes in the keyChange action.
+    KeyChangeOuter = 'keyChange'
+
 
 class AcmeNetIO:
-    def __init__(self, keyfile, password=None, nonce_url=None, session=None):
+    def __init__(self, keyfile, password=None, ca=SupportedCA.LETSENCRYPT, session=None):
         """This object performs ACME requests.
 
         :param keyfile: The pem format private key used for sign ACME requests.
         :param password: Optional, the password of the keyfile.
-        :param nonce_url: Optional, the URL to get Replay-Nonce (the newNonce field in the RFC8555, section 7.1.1).
-                          It could be omitted when initializing the AcmeNetIO object, but the nonce_url field of the
-                          AcmeNetIO object must be provided before requesting a new nonce.
+        :param ca: Optional, the CA server. Could be a member of SupportedCA or a valid directory URL.
+                   If omitted, 'Let's Encrypt' will be used.
         :param session: Optional, a requests.Session object shared by other code.
                         If omitted, a new session will be created.
+        :raises TypeError: If the ca is neither a member of SupportedCA nor a string.
         """
-
-        self.nonce_url = nonce_url
+        self.__log = logging.getLogger()
+        self.__directory = None
+        if isinstance(ca, SupportedCA):
+            self.__directory_url = ca.value
+        elif isinstance(ca, str):
+            self.__directory_url = ca
+        else:
+            raise TypeError('Invalid ca, the ca parameter should be a member of SupportedCA or a valid directory URL')
         self._nonce = ''
 
         # set up session
@@ -45,10 +73,37 @@ class AcmeNetIO:
             self.__key = jwk.JWK.from_pem(data)
         pass
 
+    @property
+    def directory(self) -> dict:
+        """Get the directory object of given ACME server.
+
+        :return: A json object representing the directory object.
+        :raise RuntimeError: If the server send a failed response code.
+        """
+        if self.__directory:
+            return self.__directory
+
+        self.__log.info('Fetching information from the ACME directory.')
+        res = self.session.get(self.__directory_url)
+        if res.ok:
+            self.__directory = res.json()
+        else:
+            raise RuntimeError(f'Failed to get ACME directory: {res.status_code} {res.reason}, {res.text}')
+
+        if 'meta' in self.__directory:
+            if 'termsOfService' in self.__directory['meta']:
+                self.__log.warning(f'Terms Of Service will be automatically agreed. '
+                                   f'you could find them at {self.__directory["meta"]["termsOfService"]}')
+                # TODO: Add a property to indicate whether the CA has a TOS.
+            if 'externalAccountRequired' in self.__directory['meta'] \
+                    and self.__directory['meta']['externalAccountRequired'] is True :
+                self.__log.warning('This server requires an external account.')
+
+        return self.__directory
+
     def _get_nonce(self):
         """Get a Replay-Nonce, either comes from the last response or request a new one.
         
-        :raises TypeError: If self.nonce_url is not a string.
         :raises RuntimeError: If the http status code indicates the request is failed.
         TODO: according to RFC8555 section 6.5.1, client MUST check the validity of the Replay-Nonce.
         """
@@ -58,14 +113,11 @@ class AcmeNetIO:
             self._nonce = None
             return result
 
-        if not isinstance(self.nonce_url, str):
-            raise TypeError(f'nonce_url is not provided or is not a str. type(nonce_url): {type(self.nonce_url)}')
-
         # According to RFC8555 section 7.2, both HEAD and GET will work.
         # But I don't think the Content-Type header should present when using the HEAD or GET method.
         # But it works for now.
         # TODO: Delete Content-Type header from HEAD or GET request.
-        res = self.session.head(self.nonce_url)
+        res = self.session.head(self.directory[AcmeAction.NewNonce.value])
         if not res.ok:
             raise RuntimeError(f'Failed to get nonce: {res.status_code} {res.reason}, {res.text}')
         return res.headers['Replay-Nonce']
@@ -127,6 +179,17 @@ class AcmeNetIO:
         s = jws.JWS(payload=payload)
         s.add_signature(self.__key, protected=protected)
         return s.serialize()
+
+    def send_request(self, url, payload) -> AcmeResponse:
+        """
+        sign and send an ACME request.
+
+        :param url: the request url, this will also be included in the protected header.
+        :param payload: the payload dict of the jws. it must be None or empty string for POST-as-GET requests.
+        :return: an AcmeResponse object representing the server response.
+        """
+
+        pass
 
     def query_kid(self) -> str:
         """Query the kid of the given keyfile.
