@@ -70,6 +70,72 @@ class AcmeNetIO:
             raise RuntimeError(f'Failed to get nonce: {res.status_code} {res.reason}, {res.text}')
         return res.headers['Replay-Nonce']
 
+    def sign_request(self, payload, url, append_nonce=True, use_kid=True) -> str:
+        """Sign a request and return the jws string.
+
+        :param payload: The payload of the jws. If the payload is a string, it will be used directly for the signing
+                        process. If the payload is a dict, it will be serialized.
+        :param url: The request url, this will also be included in the protected header.
+        :param append_nonce: whether append nonce to the protected header. Currently, this is only useful when signing
+                             the "inner JWS" of the key rollover request. For other requests, append_nonce should
+                             remain True.
+        :param use_kid: Use the 'kid' in protected header to indicate an account instead of the 'jwk'.
+                        Only set this to False when sending a newAccount request or revokeCert request authenticated by
+                        the certificate key.
+        :return: The signed and serialized JWS string.
+        :raises TypeError: If the payload is neither a string nor a dict.
+        :raises ValueError: If the given account key is neither an RSA key nor an ECC key
+        """
+
+        # serialize payload.
+        if isinstance(payload, dict):
+            payload = json.dumps(payload)
+        elif isinstance(payload, str):
+            pass
+        else:
+            raise TypeError('"payload" must be a string or a dict.')
+
+        # construct protected header
+        ecc_alg = {
+            'P-256': 'ES256',
+            'P-384': 'ES384',
+            'P-521': 'ES521'
+        }
+        if self.__key.key_type == 'RSA':
+            alg = 'RS256'
+        elif self.__key.key_type == 'EC':
+            alg = ecc_alg[self.__key.key_curve]
+        else:
+            raise ValueError(f'Unsupported key type:{self.__key.key_type}, RSA and ECC are supported.')
+
+        protected = {
+            'alg': alg,
+            'url': url
+        }
+
+        if append_nonce:
+            protected['nonce'] = self._get_nonce()
+
+        if use_kid:
+            protected['kid'] = self.query_kid()
+        else:  # use jwk
+            protected['jwk'] = self.__key.export(private_key=False, as_dict=True)
+            # The kid of the account key produced by the jwcrypto lib is unnecessary.
+            # It's not the same thing as the kid above.
+            del protected['jwk']['kid']
+
+        s = jws.JWS(payload=payload)
+        s.add_signature(self.__key, protected=protected)
+        return s.serialize()
+
+    def query_kid(self) -> str:
+        """Query the kid of the given keyfile.
+
+        :return: The URL of the account.
+        :raise RuntimeError: If there is no account corresponding to the given key.
+        """
+        pass
+
 
 class AcmeN:
     def __init__(self, account_key_file=None, account_key_password='', contact=None, ca='LETSENCRYPT'):
