@@ -18,9 +18,10 @@ n = AcmeNetIO(keyfile, password=None, ca=SupportedCA.LETSENCRYPT, session=None)
 
 ## 请求类型判断与URL转换
 
-上层代码通过向send_request或sign_request传递一个AcmeAction枚举来传入请求类型。<br>
-send_request通过\_get\_url方法将AcmeAction转换为请求的URL。<br>
-sign_request通过此枚举来构建适当的protected header。
+上层代码通过向send_request或sign_request传递一个AcmeAction枚举来传入请求类型。sign_request通过此枚举来构建适当的protected header。<br>
+除VariableUrlAction外，AcmeAction中每个成员对应的请求url都可以从directory中找到，例如NewAccount、NewOrder。对于这类请求，只需传入action参数即可。<br>
+一些请求，例如获取订单信息，其URL包含在服务器对上一个请求的响应中。上层代码负责解析此类URL，并将action设为VariableUrlAction，通过url传入实际要请求的地址。<br>
+当action被设为VariableUrlAction时，protected header将使用kid而不是jwk参数。
 
 最长调用栈为：<br>
 上层代码 -> send_request() -> sign_request() -> \_get\_url() -> directory
@@ -40,21 +41,22 @@ sign_request通过此枚举来构建适当的protected header。
 ### sign_request
 
 ```python
-s = AcmeNetIO(...).sign_request(payload, action)
+s = AcmeNetIO(...).sign_request(payload, action, url=None)
 ```
 
 `payload`：jws中要进行签名的payload，可以是字典(dict)或字符串(str)。当且仅当对POST-as-GET请求进行签名时，payload是一个空字符串。<br>
-`action`：要发送的ACME请求类型，AcmeNetIO据此构建jws的protected header。必须是AcmeAction枚举的成员。
-``
+`action`：要发送的ACME请求类型，AcmeNetIO据此构建jws的protected header。必须是AcmeAction枚举的成员。<br>
+`url`：自定义URL，当action是VariableUrlAction时，通过此参数指定目的URL。
 
 对传入的payload进行签名，此方法最常用于签名keyChange请求的InnerJWS或用于调试。其他请求可直接使用send_request。
 
 ### send_request
 
 ```python
-r = AcmeNetIO(...).send_request(pyload, action)
+r = AcmeNetIO(...).send_request(pyload, action, url=None, deserialize_response=True)
 ```
 
+`deserialize_response`：是否将服务器响应转换为json对象(通常是字典)，在大部分情况下，ACME服务器响应都是json格式，只需在获取证书时将此参数设置为False。<br>
 参数与sign_request相同。向ACME服务器发送action指定的请求，并通过命名元组`AcmeResponse`返回`code`(状态码)、`headers`(HTTP响应头，其中Replay-Nonce头已被移除)、`content`(json反序列化后的响应体，通常是字典(dict))<br>
 send_request方法会截留Replay-Nonce头并将其加入缓存。获取和添加Replay-Nonce对高层代码是透明的。<br>
 当HTTP状态码不在200-399之间时，会引发RuntimeError异常。

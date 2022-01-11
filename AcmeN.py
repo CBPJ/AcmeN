@@ -28,10 +28,22 @@ class AcmeAction(enum.Enum):
     KeyChangeInner = enum.auto()
     # This is used by sign_request function to distinguish two sign processes in the keyChange action.
     KeyChangeOuter = enum.auto()
-    DeactivateAccount = enum.auto()
+    VariableUrlAction = enum.auto()
 
 
 class AcmeNetIO:
+    # A map from the AcmeAction to the directory field name.
+    __BasicFields = {
+        AcmeAction.NewNonce: 'newNonce',
+        AcmeAction.NewAccount: 'newAccount',
+        AcmeAction.NewOrder: 'newOrder',
+        AcmeAction.NewAuthz: 'newAuthz',
+        AcmeAction.RevokeCertByAccountKey: 'revokeCert',
+        AcmeAction.RevokeCertByCertKey: 'revokeCert',
+        AcmeAction.KeyChangeInner: 'keyChange',
+        AcmeAction.KeyChangeOuter: 'keyChange'
+    }
+
     def __init__(self, keyfile, password=None, ca=SupportedCA.LETSENCRYPT, session=None):
         """This object performs ACME requests.
 
@@ -127,46 +139,32 @@ class AcmeNetIO:
         # But I don't think the Content-Type header should present when using the HEAD or GET method.
         # But it works for now.
         # TODO: Delete Content-Type header from HEAD or GET request.
-        res = self.session.head(self._get_url(AcmeAction.NewNonce))
+        res = self.session.head(self.directory[self.__BasicFields[AcmeAction.NewNonce]])
         if not res.ok:
             raise RuntimeError(f'Failed to get nonce: {res.status_code} {res.reason}, {res.text}')
         return res.headers['Replay-Nonce']
 
-    def _get_url(self, action: AcmeAction):
-        """Query the request url from directory by the action.
-
-        :param action: The AcmeAction.
-        :return: The request url.
-        """
-        if action == AcmeAction.NewNonce:
-            return self.directory['newNonce']
-        elif action == AcmeAction.NewAccount:
-            return self.directory['newAccount']
-        elif action == AcmeAction.NewOrder:
-            return self.directory['newOrder']
-        elif action == AcmeAction.NewAuthz:
-            return self.directory['newAuthz']
-        elif action == AcmeAction.RevokeCertByAccountKey:
-            return self.directory['revokeCert']
-        elif action == AcmeAction.RevokeCertByCertKey:
-            return self.directory['revokeCert']
-        elif action == AcmeAction.KeyChangeInner:
-            return self.directory['keyChange']
-        elif action == AcmeAction.KeyChangeOuter:
-            return self.directory['keyChange']
-        elif action == AcmeAction.DeactivateAccount:
-            return self.query_kid()
-
-    def sign_request(self, payload, action: AcmeAction) -> str:
+    def sign_request(self, payload, action: AcmeAction, url: str = None) -> str:
         """Sign a request and return the jws string.
 
         :param payload: The payload of the jws. If the payload is a string, it will be used directly for the signing
                         process. If the payload is a dict, it will be serialized.
         :param action: The reason of signing this payload, used for constructing the protected header.
-        :return: The signed and serialized JWS string.
+        :param url: The custom url. When url is provided, action must set to VariableUrlAction.
+        :raises ValueError: If the action is VariableUrlAction but the url is not provided.
+                            Or the action is not VariableUrlAction but the url is provided.
         :raises TypeError: If the payload is neither a string nor a dict.
         :raises ValueError: If the given account key is neither an RSA key nor an ECC key
         """
+
+        if not ((action != AcmeAction.VariableUrlAction) ^ (bool(url))):
+            raise ValueError('When action is VariableUrlAction there must be an url. '
+                             'Otherwise there must not be an url.')
+            # So action != VariableUrlAction xor url must be True.
+
+        if action != AcmeAction.VariableUrlAction:
+            # Any fixed-url-action has an entry in the directory.
+            url = self.directory[self.__BasicFields[action]]
 
         # serialize payload.
         if isinstance(payload, dict):
@@ -192,7 +190,7 @@ class AcmeNetIO:
 
         protected = {
             'alg': alg,
-            'url': self._get_url(action)
+            'url': url
         }
 
         if action != AcmeAction.KeyChangeInner:
@@ -210,19 +208,33 @@ class AcmeNetIO:
         s.add_signature(self.__key, protected=protected)
         return s.serialize()
 
-    def send_request(self, payload, action: AcmeAction) -> AcmeResponse:
+    def send_request(self, payload, action: AcmeAction, url: str = None, deserialize_response=True) -> AcmeResponse:
         """
         sign and send an ACME request.
 
-        :param payload: The payload dict of the jws. it must be None or empty string for POST-as-GET requests.
-        :param action: The reason of signing this payload, used for determining the request URL
-                       and constructing the protected header.
-        :return: an AcmeResponse object representing the server response.
+        :param payload: The payload dict of the jws. it must be None or an empty string for POST-as-GET requests.
+        :param action: The AcmeAction, used for determining the request URL and constructing the protected header.
+        :param url: The URL which the request will be sent to. It should present if and only if the action is VariableUrlAction,
+                    which means the url is determined by the upper layer code.
+                    Read the documentation for more information.
+        :param deserialize_response: Whether to deserialize the server response using json format.
+                                   When set to True, the response will be deserialized to a json object(usually a dict).
+                                   Otherwise, it will be kept as bytes.
+                                   It should be set to False only when downloading a certificate.
+        :return: An AcmeResponse object representing the server response.
         :raises RuntimeError: If the server returns a non-successful status code(<200 or >=400).
         """
-        content = self.sign_request(payload, action)
-        r = self.session.post(self._get_url(action), data=content)
-        result = AcmeResponse(r.status_code, r.headers, r.json())
+
+        content = self.sign_request(payload, action, url)
+
+        # sign_request will check the validity of action an url.
+        if action != AcmeAction.VariableUrlAction:
+            url = self.directory[self.__BasicFields[action]]
+        r = self.session.post(url, data=content)
+        if deserialize_response:
+            result = AcmeResponse(r.status_code, r.headers, r.json())
+        else:
+            result = AcmeResponse(r.status_code, r.headers, r.content)
 
         # every successful response will contain a Replay-Nonce header, RFC8555 section 6.5.
         # besides, a badNonce error will also contain a Replay-Nonce (RFC8555 section 6.5), but let's just ignored it.
@@ -244,13 +256,15 @@ class AcmeNetIO:
         """Query the kid of the given keyfile.
 
         :return: The URL of the account.
-        :raise RuntimeError: If there is no account corresponding to the given key.
+        :raise RuntimeError: If status code between 201 and 399.
         """
+
+        # TODO: catch account-not-found exception.
         r = self.send_request({'onlyReturnExisting': True}, AcmeAction.NewAccount)
         if r.code == 200:
             return r.headers['Location']
         else:
-            # We shouldn't reach here. RFC8555 doesn't specify a status code between 201-399 for this case.
+            # We shouldn't reach here.
             raise RuntimeError(f'Request failed: unknown error. {r.code}, {r.content}')
 
 
