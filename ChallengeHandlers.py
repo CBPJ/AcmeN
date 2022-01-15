@@ -1,6 +1,8 @@
-import abc, base64, hashlib
+import abc, base64, hashlib, functools
+import tld, requests
+import AcmeN
 
-import tld
+__all__ = ['CloudflareDnsHandler']
 
 
 class ChallengeHandlerBase(abc.ABC):
@@ -112,3 +114,69 @@ class Dns01Handler(ChallengeHandlerBase):
         :return: Whether the action is succeeded.
         """
         pass
+
+
+class CloudflareDnsHandler(Dns01Handler):
+    """A dns-01 handler using the cloudflare api."""
+
+    def __init__(self, api_token: str):
+        """
+        :param api_token: The cloudflare token, api-key is deprecated.
+        """
+        super().__init__()
+        self.__session = requests.Session()
+        self.__api_url = 'https://api.cloudflare.com/client/v4'
+        headers = {
+            'Content-type': 'application/json',
+            'Accept': 'application/json',
+            'User-Agent': f'AcmeN/{AcmeN.__version__}',
+            'Authorization': f'Bearer {api_token}'
+        }
+        self.__session.headers.update(headers)
+
+    @functools.lru_cache()
+    def _get_zone_id(self, fld):
+        """Get zone id of a domain.
+
+        :param fld: the domain.
+        :raises RuntimeError: If server return an unsuccessful status code.
+        :raises RuntimeError: If query result is empty.
+        :return: the zone id.
+        """
+
+        r = self.__session.get(f'{self.__api_url}/zones', params={'name': fld, 'match': 'all', 'status': 'active'})
+        if not (r.ok and r.json()['success']):
+            raise RuntimeError(f'Query zone id failed: {fld}, {r.status_code} {r.reason}, {r.text}')
+
+        result = r.json()['result']
+        if len(result) == 0:
+            raise RuntimeError(f'Cannot get zone id of "{fld}", possibly it does not exist or is inactive.')
+        return r.json()['result'][0]['id']
+
+    def set_record(self, subdomain, fld, value):
+        r = self.__session.post(f'{self.__api_url}/zones/{self._get_zone_id(fld)}/dns_records',
+                                json={'type': 'TXT', 'name': f'{subdomain}.{fld}', 'content': value, 'ttl': 60})
+        if not (r.ok and r.json()['success']):
+            raise RuntimeError(f'Set record for {subdomain}.{fld} failed: {r.status_code} {r.reason}, {r.text}')
+        return r.json()['result']['id']
+
+    def del_record(self, subdomain, fld, value, record_id) -> bool:
+        # delete record directly if record_id is provided.
+        if record_id:
+            r = self.__session.delete(f'{self.__api_url}/zones/{self._get_zone_id(fld)}/dns_records/{record_id}')
+            if r.ok:
+                return True
+            else:
+                raise RuntimeError(f'Del record {subdomain}.{fld} failed: {r.status_code} {r.status_code}, {r.text}')
+
+        # otherwise, query the record first.
+        r = self.__session.get(f'{self.__api_url}/zones/{self._get_zone_id(fld)}/dns_records',
+                               params={'match': 'all', 'name': f'{subdomain}.{fld}', 'content':value, 'type':'TXT'})
+        if not (r.ok and r.json()['success']):
+            raise RuntimeError(f'Query record id failed: {subdomain}.{fld}, {r.status_code} {r.reason}, {r.text}')
+        result = r.json()['result']
+        if len(result) == 0:
+            # TODO: return false, make log, and do not raise RuntimeError.
+            raise RuntimeError('No matching record.')
+        else:
+            return self.del_record(subdomain, fld, value, result[0]['id'])

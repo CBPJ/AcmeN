@@ -93,3 +93,17 @@ handler.post_handle(url, 'dns', 'examplr.org', token, thumbprint, True)
 则第二次调用post_handle进而调用del_record时，此次调用的record_id参数将为None。
 
 删除成功返回True，失败返回False。
+
+## CloudflareDnshandler
+
+处理托管在Cloudflare上的域名的dns-01挑战。
+
+```python
+c = CloudflareDnsHandler(api_token)
+```
+
+`api_token`：Cloudflare API-Token，我们已删除对API-Key的支持。
+
+API-Token需要Zone.Zone.Read和Zone.DNS.Edit权限。前者用于通过域名获取Zone ID，后者用于编辑DNS记录。
+
+**注意：** 若在调用del_record时提供了record_id，则del_record方法将直接删除此ID对应的记录，不检查value是否与DNS记录值相同。
