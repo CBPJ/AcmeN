@@ -31,6 +31,16 @@ pip install -r requirements.txt
 
 另外，AcmeN依赖[OpenSSL](https://www.openssl.org/) 才能运行，请确保openssl在你的`PATH`变量中，如果你使用windows且没有安装openssl，你可以在[Release](https://github.com/CBPJ/AcmeN/releases/) 页面下载我们编译好的版本。对于Linux，你可以使用软件包管理器安装。
 
+## 创建ACME账户
+
+```python
+acme = AcmeN('account.key', account_key_password='<your_password>')
+acme.register_account(contact=['mailto:xxx@yyy.zzz'])
+```
+
+这将在Let's Encrypt的ACME服务器上创建一个账户，并使用邮箱xxx@yyy.zzz作为联系方式。在进行接下来的大部分操作前，都需要一个ACME账户。当此密钥已经注册过账户时，此方法会更新contact信息，不会因账户已存在而发生异常。
+
+
 ## 签发证书
 
 AcmeN使用RFC8555规定的`dns-01`验证方式验证域名控制权，并通过调用DNS服务商的API更新或删除DNS记录。目前，AcmeN集成了Godaddy和腾讯云的API客户端。以Godaddy为例，[`main.py`](https://github.com/CBPJ/AcmeN/blob/master/main.py) 中给出了签发证书的过程:

@@ -1,4 +1,4 @@
-import subprocess, json, sys, base64, binascii, time, hashlib, re, logging, os, uuid, functools, collections, enum
+import subprocess, json, sys, time, hashlib, re, logging, os, uuid, collections, enum, typing
 
 import requests
 import dns.resolver
@@ -73,10 +73,10 @@ class AcmeNetIO:
             'Content-Type': 'application/jose+json'
         }
         if session:
-            self.session = session
+            self.__session = session
         else:
-            self.session = requests.Session()
-            self.session.headers.update(headers)
+            self.__session = requests.Session()
+            self.__session.headers.update(headers)
 
         # read keyfile
         with open(keyfile, 'rb') as file:
@@ -98,7 +98,7 @@ class AcmeNetIO:
             return self.__directory
 
         self.__log.info('Fetching information from the ACME directory.')
-        res = self.session.get(self.__directory_url)
+        res = self.__session.get(self.__directory_url)
         if res.ok:
             self.__directory = res.json()
         else:
@@ -140,7 +140,7 @@ class AcmeNetIO:
         # But I don't think the Content-Type header should present when using the HEAD or GET method.
         # But it works for now.
         # TODO: Delete Content-Type header from HEAD or GET request.
-        res = self.session.head(self.directory[self.__BasicFields[AcmeAction.NewNonce]])
+        res = self.__session.head(self.directory[self.__BasicFields[AcmeAction.NewNonce]])
         if not res.ok:
             raise RuntimeError(f'Failed to get nonce: {res.status_code} {res.reason}, {res.text}')
         return res.headers['Replay-Nonce']
@@ -231,7 +231,7 @@ class AcmeNetIO:
         # sign_request will check the validity of action an url.
         if action != AcmeAction.VariableUrlAction:
             url = self.directory[self.__BasicFields[action]]
-        r = self.session.post(url, data=content)
+        r = self.__session.post(url, data=content)
         if deserialize_response:
             result = AcmeResponse(r.status_code, r.headers, r.json())
         else:
@@ -270,83 +270,20 @@ class AcmeNetIO:
 
 
 class AcmeN:
-    def __init__(self, account_key_file=None, account_key_password='', contact=None, ca='LETSENCRYPT'):
+    def __init__(self, account_key_file=None, account_key_password='', ca=SupportedCA.LETSENCRYPT):
         # logger
         self.__log = logging.getLogger()
-        ca_dict = {
-            'LETSENCRYPT': 'https://acme-v02.api.letsencrypt.org/directory',
-            'BUYPASS': 'https://api.buypass.com/acme/directory',
-            'ZEROSSL': 'https://acme.zerossl.com/v2/DV90',
-            'LETSENCRYPT_STAGING': 'https://acme-staging-v02.api.letsencrypt.org/directory',
-            'BUYPASS_STAGING': 'https://api.test4.buypass.no/acme/directory'
-        }
-
-        try:
-            self.__ACME_DIRECTORY = ca_dict[ca]
-        except KeyError:
-            raise ValueError(f'ca should be one of {str(ca_dict.keys())}, "{ca}" is invalid.')
-
-        self.__CERTIFICATE_FORMAT = 'application/pem-certificate-chain'
 
         # Account params
-        self.__CONTACT = contact
-        if account_key_file:
-            # TODO: error handling
-            self.__log.info('Loading account key.')
-            with open(account_key_file, 'rb') as file:
-                key = file.read()
-            if account_key_password:
-                self.__ACCOUNT_KEY = jwk.JWK.from_pem(key, password=account_key_password)
-
-            else:
-                self.__ACCOUNT_KEY = jwk.JWK.from_pem(key)
-        else:
-            self.__log.warning('No account key specified, skipping key loading.')
-            self.__ACCOUNT_KEY = None
+        self.__netio = AcmeNetIO(account_key_file, account_key_password, ca)
 
         # DNS params
         self.__DNS_TTL = 20
         self.__NAME_SERVERS = ['8.8.8.8', '9.9.9.9', '1.1.1.1']
 
-        # Program params
-        self.__GET_HEADERS = {
-            'User-Agent': 'acmen/0.3.0',
-            'Accept-Language': 'en'
-        }
-
         self.__OPENSSL_CONFIG_TEMPLATE = 'openssl_config_template.cfg'
-        self.__POST_HEADER = self.__GET_HEADERS.copy()
-        self.__POST_HEADER['Content-Type'] = 'application/jose+json'
         self.__PERFORM_DNS_SELF_CHECK = True
         self.__DNS_SELF_CHECK_RETRY = 10
-
-        # Runtime params
-        self.__nonce = None
-        self.__requests_session = requests.Session()
-        self.__requests_session.headers.update(Connection='Keep-Alive')
-        self.__kid = None
-
-        self.__log.info('Fetching information from the ACME directory')
-        self.__DIRECTORY = self.__requests_session.get(self.__ACME_DIRECTORY, headers=self.__GET_HEADERS).json()
-        pass
-
-    @property
-    def __JWS_HEADERS(self):
-        result, _ = self.__read_key(self.__ACCOUNT_KEY_FILE, self.__ACCOUNT_KEY_PASSWORD)
-        return result
-
-    @property
-    def __THUMB_PRINT(self):
-        _, result = self.__read_key(self.__ACCOUNT_KEY_FILE, self.__ACCOUNT_KEY_PASSWORD)
-        return result
-
-    def __del__(self):
-        self.__requests_session.close()
-
-    @staticmethod
-    def __b64(b):
-        """"Encodes string as base64 as specified in ACME RFC """
-        return base64.urlsafe_b64encode(b).decode("utf8").rstrip("=")
 
     @staticmethod
     def __openssl(command, options, communicate=None):
@@ -358,172 +295,38 @@ class AcmeN:
             raise IOError("OpenSSL Error: {0}".format(err))
         return out
 
-    def __convert_signature(self, signature: bytes):
+    def register_account(self, contact: typing.List[str] = None) -> str:
+        """Register a new account, query an existed account or update the contact info.
 
-        len_r = signature[3]
-        len_s = signature[3 + len_r + 2]
-        r = signature[4:4 + len_r]
-        s_start = 4 + len_r + 2
-        s_end = s_start + len_s
-        s = signature[s_start:s_end]
-        if r.startswith(b'\x00'):
-            r = r[1:]
-        if s.startswith(b'\x00'):
-            s = s[1:]
-        self.__log.debug('signature converted: \n{0}\n{1}'.format(signature.hex(), (r + s).hex()))
-        return r + s
+        :param contact: The contact information of the account.
+        :raises RuntimeError: If account key is not provided.
+        :raises RuntimeError: If server return a status code between 202-399.
+        :return: The url(kid) of new account or existed account.
+        """
 
-    def __get_nonce(self):
-        temp = None
-        if self.__nonce:
-            temp, self.__nonce = self.__nonce, temp  # swap nonce and temp
+        if not self.__netio:
+            raise RuntimeError('Registering account needs an account key.')
+
+        # TODO: provide some user action.
+        payload = {
+            'termsOfServiceAgreed': True
+        }
+        if contact:
+            payload['contact']: contact
+
+        # TODO: add external account binding support.
+
+        r = self.__netio.send_request(payload, AcmeAction.NewAccount)
+        kid = r.headers['Location']
+        if r.code == 201:
+            self.__log.info(f'Account registered: {r.headers["Location"]}.')
+        elif r.code == 200:
+            self.__log.info(f'Account is already exist: {r.headers["Location"]}, updating contact info.')
+            self.__netio.send_request({'contact': contact}, AcmeAction.VariableUrlAction, url=kid)
+            self.__log.info(f'Contact information updated.')
         else:
-            self.__log.debug('getting new nonce from server')
-            temp = self.__requests_session.get(self.__DIRECTORY['newNonce'], headers=self.__GET_HEADERS)
-            temp = temp.headers['Replay-Nonce']
-
-        return temp
-
-    @functools.lru_cache
-    def __read_key(self, key_file, password=''):
-        if not key_file:
-            self.__log.fatal('no key file specified')
-            raise ValueError('no key file specified')
-        try:
-            return self.__read_rsa_key(key_file, password=password)
-        except IOError:
-            return self.__read_ecc_key(key_file, password=password)
-
-    def __read_rsa_key(self, key_file, password=''):
-        """Read rsa key , return jws_header and jwk_thumbprint"""
-        self.__log.debug('reading rsa key')
-        account_key = self.__openssl("rsa", ["-in", key_file,
-                                             "-passin", "pass:{0}".format(password),
-                                             "-noout", "-text"])
-        pub_hex, pub_exp = re.search(
-            r"modulus:\r?\n\s+00:([a-f0-9:\s]+?)\r?\npublicExponent: ([0-9]+)",
-            account_key.decode("utf8"), re.MULTILINE | re.DOTALL).groups()
-        pub_exp = "{0:x}".format(int(pub_exp))
-        pub_exp = "0{0}".format(pub_exp) if len(pub_exp) % 2 else pub_exp
-        jws_header = {
-            "alg": "RS256",
-            "jwk": {
-                "e": self.__b64(binascii.unhexlify(pub_exp.encode("utf-8"))),
-                "kty": "RSA",
-                "n": self.__b64(binascii.unhexlify(re.sub(r"(\s|:)", "", pub_hex).encode("utf-8"))),
-            }
-        }
-        account_key_json = json.dumps(jws_header["jwk"], sort_keys=True, separators=(",", ":"))
-        jwk_thumbprint = self.__b64(hashlib.sha256(account_key_json.encode("utf8")).digest())
-        return jws_header, jwk_thumbprint
-
-    def __read_ecc_key(self, key_file, password=''):
-        self.__log.debug('reading ecc key')
-        key = self.__openssl('ec', ["-in", key_file,
-                                    "-passin", "pass:{0}".format(password),
-                                    '-pubout', "-noout", "-text",
-                                    '-conv_form', 'uncompressed'])
-        key = key.decode('utf8')
-        pub_hex = re.search(
-            r'pub:\r?\n\s+04:([a-f0-9:\s]+?)\r?\nASN1 OID:',
-            key, re.MULTILINE | re.DOTALL).groups()[0]
-        pub_hex = re.sub(r'\s|:', '', pub_hex)
-        nist_curve = re.search(r'NIST CURVE: ([A-Za-z0-9\-]*)', key)
-        nist_curve = nist_curve.groups()[0] if nist_curve else None
-        curve_alg = {
-            'P-256': 'ES256',
-            'P-384': 'ES384',
-            'P-521': 'ES521'
-        }
-        if nist_curve not in curve_alg.keys():
-            raise ValueError(
-                'Only {0} are accepted, but {1} is provided'.format(', '.join(curve_alg.keys()), nist_curve))
-        index = int(len(pub_hex) / 2)
-        param_x = pub_hex[:index]
-        param_y = pub_hex[index:]
-        jws_header = {
-            "alg": curve_alg[nist_curve],
-            "jwk": {
-                'kty': "EC",
-                'crv': nist_curve,
-                'x': self.__b64(binascii.unhexlify(param_x.encode('utf8'))),
-                'y': self.__b64(binascii.unhexlify(param_y.encode('utf8')))
-            }
-        }
-        account_key_json = json.dumps(jws_header["jwk"], sort_keys=True, separators=(",", ":"))
-        jwk_thumbprint = self.__b64(hashlib.sha256(account_key_json.encode("utf8")).digest())
-        return jws_header, jwk_thumbprint
-
-    def __sign_request(self, protected, payload, sign_key=None, key_password=''):
-        # on POST-as-GET, final payload has to be just empty string
-        payload64 = '' if payload == '' else self.__b64(json.dumps(payload).encode("utf8"))
-        protected64 = self.__b64(json.dumps(protected).encode("utf8"))
-        sign_alg = {
-            'RS256': '-sha256',
-            'ES256': '-sha256',
-            'ES384': '-sha384',
-            'ES521': '-sha512'
-        }
-        openssl_alg = sign_alg[protected['alg']]
-        signature = self.__openssl("dgst", [openssl_alg, "-sign", sign_key or self.__ACCOUNT_KEY_FILE,
-                                            '-passin', 'pass:{0}'.format(key_password or self.__ACCOUNT_KEY_PASSWORD)],
-                                   "{0}.{1}".format(protected64, payload64).encode("utf8"))
-
-        # convert ECDSA signature from ASN1 DER format to raw r|s format
-        if protected['alg'].startswith('ES'):
-            signature = self.__convert_signature(signature)
-        return self.__b64(signature)
-
-    def __send_signed_request(self, url, payload, sign_key=None, key_password='', http_headers=None):
-        """Sends signed requests to ACME server."""
-        if sign_key:
-            with open(sign_key, 'rb') as file:
-                key = file.read()
-            key = jwk.JWK.from_pem(key, key_password)
-        else:
-            key = self.__ACCOUNT_KEY
-
-        ecc_alg = {
-            'P-256': 'ES256',
-            'P-384': 'ES384',
-            'P-521': 'ES521'
-        }
-        if key.key_type == 'RSA':
-            alg = 'RS256'
-        elif key.key_type == 'EC':
-            alg = ecc_alg[key.key_curve]
-        else:
-            raise ValueError(f'Unsupported key type:{key.key_type}, RSA and ECC are supported.')
-
-        protected = {
-            'alg': alg,
-            'jwk': key.export(private_key=False, as_dict=True),
-            'nonce': self.__get_nonce(),
-            'url': url,
-            'kid': self.__kid
-        }
-        # the kid of the account key produced by the jwcrypto lib is unnecessary.
-        # it's not the same thing as the kid below.
-        del protected['jwk']['kid']
-
-        if url == self.__DIRECTORY["newAccount"] or (url == self.__DIRECTORY['revokeCert'] and sign_key is not None):
-            del protected["kid"]
-        else:
-            del protected["jwk"]
-
-        if not isinstance(payload, str):
-            payload = json.dumps(payload)
-
-        s = jws.JWS(payload)
-        s.add_signature(key, protected=protected)
-
-        self.__log.debug('sending signed request to: {0}, with payload: {1}'.format(url, json.dumps(payload)))
-        response = requests.post(url, data=s.serialize(), headers=http_headers or self.__POST_HEADER)
-        self.__nonce = response.headers.get('Replay-Nonce', None) or self.__nonce
-        try:
-            return response, response.json()
-        except json.decoder.JSONDecodeError:
-            return response, {}
+            raise RuntimeError(f'Unexpected status code: {r.code}, {r.headers}, {r.content}')
+        return kid
 
     def generate_csr(self, domain, key_file, key_pass='', dns_name: list = None):
         self.__log.info('reading openssl config template: {0}'.format(self.__OPENSSL_CONFIG_TEMPLATE))
@@ -586,42 +389,6 @@ class AcmeN:
                 if san.startswith("DNS:"):
                     domains.add(san[4:])
         return domains
-
-    def _register_new_account(self):
-        """Register new account and return kid"""
-        self.__log.info('Registering ACME Account')
-        account_request = {}
-        tos = self.__DIRECTORY.get('meta', {}).get('termsOfService', '')
-        if tos != '':
-            self.__log.info('Terms Of Service is automatically agreed: {0}'.format(tos))
-            account_request['termsOfServiceAgreed'] = True
-
-        if self.__CONTACT:
-            account_request['contact'] = self.__CONTACT
-
-        self.__log.debug('sending register request')
-        response, account_info = self.__send_signed_request(self.__DIRECTORY['newAccount'], account_request)
-        if response.status_code == 201:
-            self.__log.info('New account Registered: {0}'.format(response.headers['Location']))
-        elif response.status_code == 200:
-            self.__log.info('Account is already exist: {0}'.format(response.headers['Location']))
-        else:
-            raise ValueError("Error registering account: {0} {1}".format(response.status_code, account_info))
-
-        self.__kid = response.headers['Location']
-        return response.headers['Location'], account_info
-
-    def __update_contact_info(self, kid, contact: list):
-        self.__log.info('Updating account contact information')
-        update_request = {
-            'termsOfServiceAgreed': True,
-            'contact': contact.copy()
-        }
-        response, result = self.__send_signed_request(kid, update_request)
-        if response.status_code == 200:
-            self.__log.info('Update completed')
-        else:
-            raise ValueError('Error updating contact information: {0}, {1}', response.status_code, result)
 
     def __create_order(self, domains):
         # Create order and return order's information and location
