@@ -26,19 +26,39 @@ def register_account(contact: typing.List[str] = None) -> str
 
 此方法返回账户的URL。
 
+### get_cert_by_domain
+
+通过域名获取证书。
+
+```python
+get_cert_by_domain(common_name: str, subject_alternative_name: typing.List[str],
+                   challenge_handler: ChallengeHandlerBase,
+                   key_generation_method: KeyGenerationMethod = KeyGenerationMethod.CryptographyLib,
+                   key_type: KeyType = KeyType.RSA3072, output_name: str = '') -> (bytes, bytes):
+```
+
+`common_name`：证书的commonName字段，通常是主域名。<br>
+`subject_alternative_name`：证书的subjectAlternativeName字段，可选的附加域名，不需要此扩展时可传入空列表`[]`。<br>
+`challenge_handler`：完成认证过程使用的Challenge Handler。<br>
+`key_generation_method`：生成私钥的方法，默认使用[cryptography](https://cryptography.io)库生成，改为KeyGenerationMethod.OpenSSLCLI可使用openssl 命令行工具生成。<br>
+`key_type`：密钥类型，KeyType枚举的成员，默认是RSA3072。其中ECC384使用的是secp384r1曲线，ECC256使用的是secp256r1曲线。<br>
+`output_name`：输出的证书文件绝对或相对路径，当参数是空字符串`''`时，输出文件名是`{commonName}.{timestamp}.key`和`{commonName}.{timestamp}.crt`，当参数是`None`时，证书不会被写入文件。
+
+此方法返回(私钥,证书)二元组，均是PEM字节序列(bytes)。
+
 ### get_cert_by_csr
 
 通过CSR文件获取证书。
 
 ```python
-def get_cert_by_csr(csr: typing.Union[str, bytes], challenge_handler: ChallengeHandlerBase, output_name: str = None):
+def get_cert_by_csr(csr: typing.Union[str, bytes], challenge_handler: ChallengeHandlerBase, output_name: str = None) -> bytes:
 ```
 
 `csr`：CSR文件的路径或文件内容，当传入文件内容时既可以是str也可以是bytes。<br>
 `challenge_handler`：完成认证过程使用的Challenge Handler。<br>
-`output_name`：输出的证书文件绝对或相对路径，未提供此参数时，输出文件名是"{commonName}.{timestamp}.crt"
+`output_name`：输出的证书文件绝对或相对路径，当参数是空字符串`''`时，输出文件名是`{commonName}.{timestamp}.crt`，当参数是`None`时，证书不会被写入文件。
 
-此方法返回服务器所返回的证书内容。
+此方法返回服务器所签发的证书的bytes字节序列。
 
 ### process_order
 

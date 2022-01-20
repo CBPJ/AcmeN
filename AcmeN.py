@@ -5,13 +5,14 @@ import dns.resolver
 from jwcrypto import jws, jwk
 from cryptography import x509
 from cryptography.hazmat import backends
-from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives.asymmetric import rsa, ec
 
 from ChallengeHandlers import ChallengeHandlerBase
 from DnsHandlers import *
 
 __version__ = '0.3.0'
-__all__ = ['SupportedCA', 'AcmeAction', 'AcmeNetIO', 'AcmeN']
+__all__ = ['SupportedCA', 'AcmeAction', 'AcmeNetIO', 'AcmeN', 'KeyType', 'KeyGenerationMethod']
 
 AcmeResponse = collections.namedtuple('AcmeResponse', ('code', 'headers', 'content'))
 
@@ -35,6 +36,19 @@ class AcmeAction(enum.Enum):
     # This is used by sign_request function to distinguish two sign processes in the keyChange action.
     KeyChangeOuter = enum.auto()
     VariableUrlAction = enum.auto()
+
+
+class KeyType(enum.Enum):
+    ECC384 = enum.auto()
+    ECC256 = enum.auto()
+    RSA4096 = enum.auto()
+    RSA3072 = enum.auto()
+    RSA2048 = enum.auto()
+
+
+class KeyGenerationMethod(enum.Enum):
+    CryptographyLib = enum.auto()
+    OpenSSLCLI = enum.auto()
 
 
 class AcmeNetIO:
@@ -338,13 +352,99 @@ class AcmeN:
             raise RuntimeError(f'Unexpected status code: {r.code}, {r.headers}, {r.content}')
         return kid
 
+    def get_cert_by_domain(self, common_name: str, subject_alternative_name: typing.List[str],
+                           challenge_handler: ChallengeHandlerBase,
+                           key_generation_method: KeyGenerationMethod = KeyGenerationMethod.CryptographyLib,
+                           key_type: KeyType = KeyType.RSA3072, output_name: str = '') -> typing.Tuple[bytes, bytes]:
+        """Get certificate by domains.
+
+        :param common_name: The commonName field of the certificate.
+        :param subject_alternative_name:  The subjectAlternativeName extension of the certificate.
+        :param challenge_handler:  The challenge handler to handle challenge.
+        :param key_type: The type of the private key, must be a member of KeyType enum, default to RSA3072.
+        :param output_name: The output name of the files, the key file will be appended '.key' as suffix,
+                            the certificate file will be appended '.crt' as suffix,
+                            if empty string '' is provided {common_name}.{timestamp}.key/crt will be used,
+                            if None is provided, key and certificate will not be written to file.
+        :param key_generation_method: How to generate the private key, using the cryptography lib or openssl cli.
+        :raises TypeError: If key_type is not a member of KeyType enum.
+        :raises TypeError: If key_generation_method is not a member of KeyGenerationMethod.
+        :raises ValueError: If key_type is not supported.
+        :raises ValueError: If key_generation_method is not supported.
+        :return: The tuple of (private_key, certificate) both in pem format.
+        """
+
+        # generate private key
+        if not isinstance(key_type, KeyType):
+            raise TypeError('key_type must be a member of KeyType enum.')
+        if not isinstance(key_generation_method, KeyGenerationMethod):
+            raise TypeError('key_generation_method must be a member of KeyGenerationMethod enum.')
+        if key_generation_method == KeyGenerationMethod.CryptographyLib:
+            self.__log.info('Generating private key using cryptography lib.')
+            if key_type == KeyType.ECC384:
+                key = ec.generate_private_key(ec.SECP384R1())
+            elif key_type == KeyType.ECC256:
+                key = ec.generate_private_key(ec.SECP256R1())
+            elif key_type == KeyType.RSA4096:
+                key = rsa.generate_private_key(65537, 4096)
+            elif key_type == KeyType.RSA3072:
+                key = rsa.generate_private_key(65537, 3072)
+            elif key_type == KeyType.RSA2048:
+                key = rsa.generate_private_key(65537, 2048)
+            else:
+                raise ValueError(f'Unsupported key_type: {key_type.name}.')
+        elif key_generation_method == KeyGenerationMethod.OpenSSLCLI:
+            self.__log.info('Generating private key using openssl cli.')
+            if key_type == KeyType.ECC384:
+                key = self.__openssl('ecparam', ['-genkey', '-name', 'secp384r1', '-noout'])
+            elif key_type == KeyType.ECC256:
+                key = self.__openssl('ecparam', ['-genkey', '-name', 'secp256r1', '-noout'])
+            elif key_type == KeyType.RSA4096:
+                key = self.__openssl('genrsa', ['4096'])
+            elif key_type == KeyType.RSA3072:
+                key = self.__openssl('genrsa', ['3072'])
+            elif key_type == KeyType.RSA2048:
+                key = self.__openssl('genrsa', ['2048'])
+            else:
+                raise ValueError(f'Unsupported key_type: {key_type.name}')
+            key = serialization.load_pem_private_key(key, password=None)
+        else:
+            raise ValueError('Unsupported key_generation_method.')
+
+        # generate CSR
+        c = x509.CertificateSigningRequestBuilder()
+        c = c.subject_name(x509.Name([x509.NameAttribute(x509.NameOID.COMMON_NAME, common_name)]))
+        if subject_alternative_name:
+            c = c.add_extension(x509.SubjectAlternativeName([x509.DNSName(i) for i in subject_alternative_name]), True)
+        c = c.sign(key, hashes.SHA256())
+
+        # process order
+        domains = set(subject_alternative_name)
+        domains.add(common_name)
+        cert = self.get_cert_by_csr(c.public_bytes(serialization.Encoding.DER), challenge_handler, None)
+        key = key.private_bytes(serialization.Encoding.PEM,
+                                serialization.PrivateFormat.PKCS8,
+                                serialization.NoEncryption())
+        if output_name is not None:
+            output_name = output_name or f'{common_name}.{str(int(time.time()))}'
+            # write private key
+            with open(f'{output_name}.key', 'wb') as file:
+                file.write(key)
+
+            # write certificate
+            with open(f'{output_name}.crt', 'wb') as file:
+                file.write(cert)
+        return key, cert
+
     def get_cert_by_csr(self, csr: typing.Union[str, bytes], challenge_handler: ChallengeHandlerBase,
-                        output_name: str = None):
+                        output_name: str = None) -> bytes:
         """Get certificate by csr.
 
         :param csr: The path to the csr file or the content of a csr file.
         :param challenge_handler: The challenge handler to handle challenge.
-        :param output_name: The output certificate name, if omitted, {Common Name}.{Timestamp}.crt will be used.
+        :param output_name: The output certificate name. If an empty string ('') is provided,
+                            {Common Name}.{Timestamp}.crt will be used. If None is provided, the certificate will not
+                            be written to a file.
         :raises RuntimeError: If the order status is not valid after finalization.
         :return: The bytes representing the certificate.
         """
@@ -403,10 +503,11 @@ class AcmeN:
         self.__log.info('Certificate is issued.')
         # TODO: send download-certificate request using 'Accept: application/pem-certificate-chain' header.
         r_cert = self.__netio.send_request('', AcmeAction.VariableUrlAction, r_order.content['certificate'], False)
-        output_name = output_name or f'{cn}.{str(int(time.time()))}.crt'
-        with open(output_name, 'wb') as file:
-            file.write(r_cert.content)
-        return r_cert.content.decode()
+        if output_name is not None:
+            output_name = output_name or f'{cn}.{str(int(time.time()))}.crt'
+            with open(output_name, 'wb') as file:
+                file.write(r_cert.content)
+        return r_cert.content
 
     def process_order(self, domains: typing.Set[str], challenge_handler: ChallengeHandlerBase) -> AcmeResponse:
         """Create an order and fulfill the challenges in it.
