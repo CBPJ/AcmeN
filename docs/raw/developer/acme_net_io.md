@@ -36,6 +36,10 @@ n = AcmeNetIO(keyfile, password=None, ca=SupportedCA.LETSENCRYPT, session=None)
 
 获取json格式表示的密钥公钥，可用于jwk字段。
 
+### key_thumbprint
+
+获取密钥的SHA256指纹。
+
 ## 方法
 
 ### sign_request

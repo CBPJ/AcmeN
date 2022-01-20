@@ -1,5 +1,6 @@
-import abc, base64, hashlib, functools
-import tld, requests
+import abc, base64, hashlib, functools, time
+
+import tld, requests, dns
 import AcmeN
 
 __all__ = ['CloudflareDnsHandler']
@@ -7,9 +8,13 @@ __all__ = ['CloudflareDnsHandler']
 
 class ChallengeHandlerBase(abc.ABC):
 
-    @property
     @abc.abstractmethod
-    def handler_type(self):
+    def get_handler_type(self, domain: str) -> str:
+        """Get handler type of the domain.
+
+        :param domain: The domain.
+        :return: Which type of challenge this handler can handle for the domain.
+        """
         pass
 
     @abc.abstractmethod
@@ -18,12 +23,11 @@ class ChallengeHandlerBase(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def handle(self, url, id_type, id_value, token, key_thumbprint) -> bool:
+    def handle(self, url, identifier, token, key_thumbprint) -> bool:
         """Process the challenge.
 
         :param url: The url of the challenge. This could be used for uniquely identify a challenge.
-        :param id_type: The identifier type of the authorization object. Currently, it's preserved for future use.
-        :param id_value: The identifier value of the authorization object.
+        :param identifier: The identifier value of the authorization object.
         :param token: The challenge token.
         :param key_thumbprint: The account key's thumbprint.
         :return: Whether the challenge is fulfilled.
@@ -31,12 +35,11 @@ class ChallengeHandlerBase(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def post_handle(self, url, id_type, id_value, token, key_thumbprint, succeed) -> bool:
+    def post_handle(self, url, identifier, token, key_thumbprint, succeed) -> bool:
         """Undo the action have been taken before to fulfill the challenge.
 
         :param url: The url of the challenge. This could be used for uniquely identify a challenge.
-        :param id_type: The identifier type of the authorization object. Currently, it's preserved for future use.
-        :param id_value: The identifier value of the authorization object.
+        :param identifier: The identifier value of the authorization object.
         :param token: The challenge token.
         :param key_thumbprint: The account key's thumbprint.
         :param succeed: Whether the previous challenge handling process is succeed. It should be the return value of
@@ -45,14 +48,16 @@ class ChallengeHandlerBase(abc.ABC):
         """
         pass
 
-    # TODO: add_domain(), remove_domain(), list_domain().
-
 
 class Dns01Handler(ChallengeHandlerBase):
     """This class handles dns-01 challenge."""
 
     # A map from the challenge url to the dns provider's record id.
-    __record_ids = {}
+    def __init__(self):
+        self.__record_ids = {}
+        self.__resolver = dns.resolver.Resolver(configure=False)
+        self.__resolver.nameservers = ['8.8.8.8', '1.1.1.1', '9.9.9.9']
+        self.__resolver.retry_servfail = False
 
     @staticmethod
     def txt_value(token, key_thumbprint):
@@ -66,26 +71,46 @@ class Dns01Handler(ChallengeHandlerBase):
         key_authz = hashlib.sha256(key_authz.encode('utf8')).digest()
         return base64.urlsafe_b64encode(key_authz).decode().rstrip('=')
 
-    @property
-    def handler_type(self):
+    def check_txt_record(self, domain: str, value: str) -> bool:
+        """Query the dns server to check whether the record match the expected value.
+
+        :param domain: The domain.
+        :param value: The expected value.
+        :return: whether the record match the expected value.
+        """
+        records = set()
+        try:
+            for record in self.__resolver.resolve(domain, rdtype='TXT').rrset:
+                records.add(record.to_text().strip('"'))
+        except dns.exception.DNSException:
+            return False
+        return bool(value in records)
+
+    def get_handler_type(self, domain: str):
         return 'dns-01'
 
     def pre_handle(self):
         pass
 
-    def handle(self, url, id_type, id_value, token, key_thumbprint) -> bool:
+    def handle(self, url, identifier, token, key_thumbprint) -> bool:
         # TODO: Check the validity of the token.
         # possibly, token = re.sub(r"[^A-Za-z0-9_\-]", "_", token)
-        domain = tld.get_tld(id_value, as_object=True, fix_protocol=True)
+        domain = tld.get_tld(identifier, as_object=True, fix_protocol=True)
         r = self.set_record(f'_acme-challenge.{domain.subdomain}', domain.fld, self.txt_value(token, key_thumbprint))
-        if r:
-            self.__record_ids[url] = r
-            return True
-        else:
+
+        if not r:
             return False
 
-    def post_handle(self, url, id_type, id_value, token, key_thumbprint, succeed) -> bool:
-        domain = tld.get_tld(id_value, as_object=True, fix_protocol=True)
+        # check dns record every 10 seconds, 600 seconds at most.
+        for i in range(60):
+            if self.check_txt_record(f'_acme-challenge.{identifier}', self.txt_value(token, key_thumbprint)):
+                return True
+            else:
+                time.sleep(10)
+        return False
+
+    def post_handle(self, url, identifier, token, key_thumbprint, succeed) -> bool:
+        domain = tld.get_tld(identifier, as_object=True, fix_protocol=True)
         return self.del_record(f'_acme-challenge.{domain.subdomain}', domain.fld,
                                self.txt_value(token, key_thumbprint), self.__record_ids.pop(url, None))
 
@@ -171,7 +196,7 @@ class CloudflareDnsHandler(Dns01Handler):
 
         # otherwise, query the record first.
         r = self.__session.get(f'{self.__api_url}/zones/{self._get_zone_id(fld)}/dns_records',
-                               params={'match': 'all', 'name': f'{subdomain}.{fld}', 'content':value, 'type':'TXT'})
+                               params={'match': 'all', 'name': f'{subdomain}.{fld}', 'content': value, 'type': 'TXT'})
         if not (r.ok and r.json()['success']):
             raise RuntimeError(f'Query record id failed: {subdomain}.{fld}, {r.status_code} {r.reason}, {r.text}')
         result = r.json()['result']

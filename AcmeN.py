@@ -1,8 +1,13 @@
-import subprocess, json, sys, time, hashlib, re, logging, os, uuid, collections, enum, typing
+import subprocess, json, sys, time, hashlib, re, logging, os, uuid, collections, enum, typing, base64, functools
 
 import requests
 import dns.resolver
 from jwcrypto import jws, jwk
+from cryptography import x509
+from cryptography.hazmat import backends
+from cryptography.hazmat.primitives import serialization
+
+from ChallengeHandlers import ChallengeHandlerBase
 from DnsHandlers import *
 
 __version__ = '0.3.0'
@@ -123,6 +128,10 @@ class AcmeNetIO:
         # It's not the same thing as the kid of an ACME account.
         del result['kid']
         return result
+
+    @property
+    def key_thumbprint(self) -> str:
+        return self.__key.thumbprint()
 
     def _get_nonce(self):
         """Get a Replay-Nonce, either comes from the last response or request a new one.
@@ -253,6 +262,7 @@ class AcmeNetIO:
 
         return result
 
+    @functools.lru_cache
     def query_kid(self) -> str:
         """Query the kid of the given keyfile.
 
@@ -270,12 +280,12 @@ class AcmeNetIO:
 
 
 class AcmeN:
-    def __init__(self, account_key_file=None, account_key_password='', ca=SupportedCA.LETSENCRYPT):
+    def __init__(self, key_file, key_passphrase='', ca=SupportedCA.LETSENCRYPT):
         # logger
         self.__log = logging.getLogger()
 
         # Account params
-        self.__netio = AcmeNetIO(account_key_file, account_key_password, ca)
+        self.__netio = AcmeNetIO(key_file, key_passphrase, ca)
 
         # DNS params
         self.__DNS_TTL = 20
@@ -312,7 +322,7 @@ class AcmeN:
             'termsOfServiceAgreed': True
         }
         if contact:
-            payload['contact']: contact
+            payload['contact'] = contact
 
         # TODO: add external account binding support.
 
@@ -327,6 +337,172 @@ class AcmeN:
         else:
             raise RuntimeError(f'Unexpected status code: {r.code}, {r.headers}, {r.content}')
         return kid
+
+    def get_cert_by_csr(self, csr: typing.Union[str, bytes], challenge_handler: ChallengeHandlerBase,
+                        output_name: str = None):
+        """Get certificate by csr.
+
+        :param csr: The path to the csr file or the content of a csr file.
+        :param challenge_handler: The challenge handler to handle challenge.
+        :param output_name: The output certificate name, if omitted, {Common Name}.{Timestamp}.crt will be used.
+        :raises RuntimeError: If the order status is not valid after finalization.
+        :return: The bytes representing the certificate.
+        """
+
+        # read csr
+        self.__log.info('Loading CSR.')
+        if isinstance(csr, str) and csr.startswith('-----BEGIN CERTIFICATE REQUEST-----'):
+            csr = csr.encode()
+
+        if isinstance(csr, str):
+            with open(csr, 'rb') as file:
+                csr = file.read()
+        try:
+            self.__log.debug('Trying to loading CSR using der format.')
+            csr = x509.load_der_x509_csr(csr, backends.default_backend())
+        except ValueError:
+            self.__log.debug('CSR is not in der format, trying to loading CSR using pem format.')
+            csr = x509.load_pem_x509_csr(csr, backends.default_backend())
+
+        # get domains from csr
+        domains = set()
+        cn = csr.subject.get_attributes_for_oid(x509.oid.NameOID.COMMON_NAME)[0].value
+        domains.add(cn)  # add commonName
+        self.__log.debug(f'commonName: {cn}')
+        # add SAN if existed
+        try:
+            san = csr.extensions.get_extension_for_class(x509.SubjectAlternativeName).value
+            for i in san:
+                domains.add(i.value)
+                self.__log.debug(f'subjectAlternativeName: {i.value}')
+        except x509.extensions.ExtensionNotFound:
+            self.__log.debug('No subjectAlternativeName found in CSR.')
+            pass
+
+        # process order
+        self.__log.info(f'All domains in CSR: {str(domains)}')
+        r_order = self.process_order(domains, challenge_handler)
+
+        # finalize order by sending csr to server.
+        self.__log.info('Finalizing order.')
+        csr = base64.urlsafe_b64encode(csr.public_bytes(serialization.Encoding.DER)).decode().rstrip('=')
+        r_order = self.__netio.send_request({'csr': csr}, AcmeAction.VariableUrlAction, r_order.content['finalize'])
+
+        # poll order status
+        retry_counter = 5
+        while r_order.content['status'] == 'processing' and retry_counter > 5:
+            time.sleep(int(r_order.headers.get('Retry-After', '5')))
+            self.__log.debug('Order is processing, polling order status.')
+            r_order = self.__netio.send_request('', AcmeAction.VariableUrlAction, r_order.headers['Location'])
+            retry_counter -= 1
+        if r_order.content['status'] != 'valid':
+            raise RuntimeError(f'Order status is not valid after finalization. {r_order.headers["Location"]}, '
+                               f'status: {r_order.content["status"]}.')
+
+        # download certificate and write it to a file.
+        self.__log.info('Certificate is issued.')
+        # TODO: send download-certificate request using 'Accept: application/pem-certificate-chain' header.
+        r_cert = self.__netio.send_request('', AcmeAction.VariableUrlAction, r_order.content['certificate'], False)
+        output_name = output_name or f'{cn}.{str(int(time.time()))}.crt'
+        with open(output_name, 'wb') as file:
+            file.write(r_cert.content)
+        return r_cert.content.decode()
+
+    def process_order(self, domains: typing.Set[str], challenge_handler: ChallengeHandlerBase) -> AcmeResponse:
+        """Create an order and fulfill the challenges in it.
+
+        :param domains: The domains in the order.
+        :param challenge_handler: The challenge handler to fulfill the challenges.
+        :raises RuntimeError: If the status of an order is neither ready nor pending after its creation.
+        :raises RuntimeError: If the status of an authorization is neither valid nor pending before processing.
+        :raises RuntimeError: If there is no appropriate challenge_handler for an authorization.
+        # :raises RuntimeError: If the status of a challenge is not valid after handling the challenge.
+        :raises RuntimeError: If the status of an authorization is not valid after fulfill one of the challenge in it,
+                              usually it could not happen.
+        :raises RuntimeError: If the status of an order is not ready after fulfill all necessary challenges.
+        :return: The AcmeResponse object representing the final order status.
+        """
+        # create newOrder
+        self.__log.info(f'Creating order for: {str(domains)}')
+        identifiers = [{'type': 'dns', 'value': i} for i in domains]
+        r_order = self.__netio.send_request({'identifiers': identifiers}, AcmeAction.NewOrder)
+        order_url = r_order.headers.get('Location')
+
+        # check order status.
+        self.__log.debug(f'Order status: {r_order.content["status"]}, url: {order_url}')
+        if r_order.content['status'] == 'ready':
+            self.__log.info('Order status is ready after creation.')
+            return r_order
+
+        if r_order.content['status'] != 'pending':
+            raise RuntimeError(f'Order is neither ready nor pending after creation, '
+                               f'status: {r_order.content["status"]}.')
+
+        for authz_url in r_order.content['authorizations']:
+            # fetch authorization
+            r_authz = self.__netio.send_request('', AcmeAction.VariableUrlAction, authz_url)
+            self.__log.info(f'Processing authorization for {r_authz.content["identifier"]["value"]}, '
+                            f'status: {r_authz.content["status"]}')
+            if r_authz.content['status'] == 'valid':
+                continue
+            if r_authz.content['status'] != 'pending':
+                raise RuntimeError(f'Cannot process authorization {authz_url}, status: {r_authz.content["status"]}, '
+                                   f'identifier: {r_authz.content["identifier"]["value"]}.')
+
+            # determine which challenge to fulfill
+            challenge = [c for c in r_authz.content['challenges']
+                         if c['type'] == challenge_handler.get_handler_type(r_authz.content['identifier']['value'])]
+            if len(challenge) == 0:
+                raise RuntimeError(f'No appropriate challenge_handler for this authorization: {authz_url}, '
+                                   f'identifier: {r_authz.content["identifier"]["value"]}.')
+            challenge = challenge[0]
+
+            # handle challenge
+            self.__log.debug(f'Fulfilling challenge for {r_authz.content["identifier"]["value"]}, '
+                             f'type: {challenge["type"]}')
+            r = challenge_handler.handle(challenge['url'], r_authz.content['identifier']['value'],
+                                         challenge['token'], self.__netio.key_thumbprint)
+            self.__log.debug('Notifying server to validate the challenge.')
+            r_challenge = self.__netio.send_request({}, AcmeAction.VariableUrlAction, challenge['url'])
+
+            # According to RFC8555 section 7.5.1, client should send Post-as-Get request to authorization url.
+            # check the challenge status, retry 5 times if it's still processing.
+
+            # retry_counter = 5
+            # while r_challenge.content['status'] in ('processing', 'pending')  and retry_counter > 0:
+            #     time.sleep(int(r_challenge.headers.get('Retry-After', '5')))
+            #     r_challenge = self.__netio.send_request('', AcmeAction.VariableUrlAction, r_challenge.content['url'])
+            #     retry_counter -= 1
+            #
+            # if r_challenge.content['status'] != 'valid':
+            #     raise RuntimeError(f'Challenge status is not valid: {r_challenge.content["url"]}, '
+            #                        f'status: {r_challenge.content["status"]}, authorization: {authz_url}, '
+            #                        f'identifier: {r_authz.content["identifier"]["value"]}.')
+
+            # check the authorization status.
+            retry_counter = 5
+            self.__log.debug('Checking authorization status.')
+            r_authz = self.__netio.send_request('', AcmeAction.VariableUrlAction, authz_url)
+            while r_authz.content['status'] == 'pending' and retry_counter > 0:
+                time.sleep(int(r_authz.headers.get('Retry-After', 5)))
+                self.__log.debug('Retrying to check the authorization status.')
+                r_authz = self.__netio.send_request('', AcmeAction.VariableUrlAction, authz_url)
+                retry_counter -= 1
+            r = challenge_handler.post_handle(challenge['url'], r_authz.content['identifier']['value'],
+                                              challenge['token'], self.__netio.key_thumbprint, r)
+            if r_authz.content['status'] != 'valid':
+                raise RuntimeError(f'Authorization status is not valid: {authz_url}, '
+                                   f'status: {r_authz.content["status"]}, '
+                                   f'identifier: {r_authz.content["identifier"]["value"]}.')
+
+        # check the order status
+        self.__log.debug('Checking order status.')
+        r_order = self.__netio.send_request('', AcmeAction.VariableUrlAction, order_url)
+        if r_order.content['status'] != 'ready':
+            raise RuntimeError(f'Order status is not ready after fulfill all necessary challenge: {order_url}, '
+                               f'status: {r_order.content["status"]}')
+        self.__log.info('Order is ready.')
+        return r_order
 
     def generate_csr(self, domain, key_file, key_pass='', dns_name: list = None):
         self.__log.info('reading openssl config template: {0}'.format(self.__OPENSSL_CONFIG_TEMPLATE))

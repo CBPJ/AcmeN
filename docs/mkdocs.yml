@@ -10,6 +10,7 @@ nav:
         - DNS: developer/dns.md
         - 网络IO: developer/acme_net_io.md
         - ChallengeHandling: developer/challenge_handlers/index.md
+        - AcmeN: developer/acmen.md
     - 其他:
         - 致谢: acknowledgment.md
         - ChangeLog: changelog.md
