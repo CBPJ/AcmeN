@@ -19,10 +19,12 @@ acmen = AcmeN(key_file, key_passphrase='', ca=SupportedCA.LETSENCRYPT)
 使用实例化时指定的私钥注册ACME账户。
 
 ```python
-def register_account(contact: typing.List[str] = None) -> str
+def register_account(contact: typing.List[str] = None, eab_key_identifier: str = None, eab_mac_key: str = None) -> str
 ```
 
-`contact`：此账户的联系方式列表，例如`['mailto:admin@example.com', 'mailto:admin2@example.com']`，可选。
+`contact`：此账户的联系方式列表，例如`['mailto:admin@example.com', 'mailto:admin2@example.com']`，可选。<br>
+`eab_key_identifier`：外部密钥绑定(externalKeyBinding)使用的key identifier。<br>
+`eab_mac_key`：外部密钥绑定(externalKeyBinding)使用的mac key。
 
 此方法返回账户的URL。
 

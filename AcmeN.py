@@ -256,7 +256,12 @@ class AcmeNetIO:
             url = self.directory[self.__BasicFields[action]]
         r = self.__session.post(url, data=content)
         if deserialize_response:
-            result = AcmeResponse(r.status_code, r.headers, r.json())
+            # zerossl.com sends responses like "externalAccountBinding": {{"payload": "***", ..., "signature": "***"}}
+            # which is not a valid json object, so r.json() will fail.
+            # And they say they are sending "application/json"....
+            result = r.content.decode().replace('{{', '{').replace('}}', '}')
+            result = json.loads(result)
+            result = AcmeResponse(r.status_code, r.headers, result)
         else:
             result = AcmeResponse(r.status_code, r.headers, r.content)
 
@@ -319,17 +324,23 @@ class AcmeN:
             raise IOError("OpenSSL Error: {0}".format(err))
         return out
 
-    def register_account(self, contact: typing.List[str] = None) -> str:
+    def register_account(self, contact: typing.List[str] = None, eab_key_identifier: str = None,
+                         eab_mac_key: str = None) -> str:
         """Register a new account, query an existed account or update the contact info.
 
         :param contact: The contact information of the account.
+        :param eab_key_identifier: The key identifier provided by a CA which require external account binding.
+        :param eab_mac_key: The MAC key provided by a CA which require external account binding.
         :raises RuntimeError: If account key is not provided.
+        :raises ValueError: If one of eab_key_identifier and eab_mac_key is provided but the other one is not.
         :raises RuntimeError: If server return a status code between 202-399.
         :return: The url(kid) of new account or existed account.
         """
 
         if not self.__netio:
             raise RuntimeError('Registering account needs an account key.')
+        if bool(eab_key_identifier) ^ bool(eab_mac_key):
+            raise ValueError('One of eab_key_identifier and eab_mac_key is provided but the other one is not.')
 
         # TODO: provide some user action.
         payload = {
@@ -338,7 +349,16 @@ class AcmeN:
         if contact:
             payload['contact'] = contact
 
-        # TODO: add external account binding support.
+        if eab_key_identifier:
+            k = jwk.JWK(kty='oct', k=eab_mac_key)
+            protected_header = {
+                'alg': 'HS256',
+                'kid': eab_key_identifier,
+                'url': self.__netio.directory['newAccount']
+            }
+            s = jws.JWS(payload=json.dumps(self.__netio.pubkey))
+            s.add_signature(k, protected=protected_header)
+            payload['externalAccountBinding'] = s.serialize()
 
         r = self.__netio.send_request(payload, AcmeAction.NewAccount)
         kid = r.headers['Location']
