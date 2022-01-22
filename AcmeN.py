@@ -931,12 +931,5 @@ class AcmeN:
         self.__log.info('key Changed')
 
     def deactivate_account(self):
-        self._register_new_account()
-        payload = {
-            'status': 'deactivated'
-        }
-        response, result = self.__send_signed_request(self.__kid, payload)
-        if response.status_code != 200:
-            raise ValueError('Error during account deactivation: {0} {1}'.format(response.status_code, result))
+        self.__netio.send_request({'status':'deactivated'}, AcmeAction.VariableUrlAction, self.__netio.query_kid())
         self.__log.info('account deactivated')
-        pass

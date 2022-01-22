@@ -74,3 +74,11 @@ def process_order(domains: typing.Set[str], challenge_handler: ChallengeHandlerB
 `challenge_handler`：完成认证过程使用的Challenge Handler。
 
 此方法返回完成订单后从订单URL获取到的订单对象。
+
+### deactivate_account
+
+注销此密钥所对应的账户。
+
+```python
+def deactivate_account():
+```
