@@ -64,7 +64,8 @@ class AcmeNetIO:
         AcmeAction.KeyChangeOuter: 'keyChange'
     }
 
-    def __init__(self, keyfile, password=None, ca=SupportedCA.LETSENCRYPT, session=None):
+    def __init__(self, keyfile, password=None, ca: typing.Union[SupportedCA, str] = SupportedCA.LETSENCRYPT,
+                 session=None):
         """This object performs ACME requests.
 
         :param keyfile: The pem format private key used for sign ACME requests.
@@ -135,6 +136,10 @@ class AcmeNetIO:
         return self.__directory
 
     @property
+    def directory_url(self) -> str:
+        return self.__directory_url
+
+    @property
     def pubkey(self) -> dict:
         """Get the public key in the standard json format."""
         result = self.__key.export_public(as_dict=True)
@@ -149,7 +154,7 @@ class AcmeNetIO:
 
     def _get_nonce(self):
         """Get a Replay-Nonce, either comes from the last response or request a new one.
-        
+
         :raises RuntimeError: If the http status code indicates the request is failed.
         TODO: according to RFC8555 section 6.5.1, client MUST check the validity of the Replay-Nonce.
         """
@@ -907,29 +912,28 @@ class AcmeN:
             raise ValueError("Error during revocation: {0} {1}".format(response.status_code, result))
         self.__log.info('Certificate Revoked')
 
-    def key_change(self, new_key_file, password: str = ''):
-        self._register_new_account()  # to get kid
-        protected, _ = self.__read_key(new_key_file, password)
-        protected['url'] = self.__DIRECTORY['keyChange']
-        payload = {
-            'account': self.__kid,
-            'oldKey': self.__JWS_HEADERS['jwk']
-        }
-        payload64 = '' if payload == '' else self.__b64(json.dumps(payload).encode("utf8"))
-        protected64 = self.__b64(json.dumps(protected).encode("utf8"))
-        new_payload = {
-            'protected': protected64,
-            'payload': payload64,
-            'signature': self.__sign_request(protected, payload, new_key_file, password)
-        }
-        response, result = self.__send_signed_request(self.__DIRECTORY['keyChange'], new_payload)
-        if response.status_code != 200:
-            raise ValueError('Error during key change: {0} {1}'.format(response.status_code, result))
+    def key_change(self, new_key_file, password: str = '') -> None:
+        """Change the account key of an ACME account.
 
-        self.__ACCOUNT_KEY_FILE = new_key_file
-        self.__ACCOUNT_KEY_PASSWORD = password
+        :param new_key_file: The new account key file.
+        :param password: The passphrase of the new account key file.
+        :return: None
+        """
+
+        new_key = AcmeNetIO(new_key_file, password, self.__netio.directory_url)
+        payload = new_key.sign_request({'account': self.__netio.query_kid(), 'oldKey': self.__netio.pubkey},
+                                       AcmeAction.KeyChangeInner)
+        r = self.__netio.send_request(payload, AcmeAction.KeyChangeOuter)
+        self.__netio = new_key
         self.__log.info('key Changed')
 
     def deactivate_account(self):
-        self.__netio.send_request({'status':'deactivated'}, AcmeAction.VariableUrlAction, self.__netio.query_kid())
+        self.__netio.send_request({'status': 'deactivated'}, AcmeAction.VariableUrlAction, self.__netio.query_kid())
         self.__log.info('account deactivated')
+
+    def query_kid(self):
+        """Query the kid of the given keyfile.
+
+        :return: The URL of the account.
+        """
+        return self.__netio.query_kid()

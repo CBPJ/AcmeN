@@ -32,6 +32,10 @@ n = AcmeNetIO(keyfile, password=None, ca=SupportedCA.LETSENCRYPT, session=None)
 
 获取指定CA的ACME Directory。由于CA参数在AcmeNetIO的整个生命周期中不会改变，因此仅在第一次使用directory的值时向ACME服务器查询数据。后续将使用第一次查询的结果。
 
+### directory_url
+
+指定CA的Direcorty URL。
+
 ### pubkey
 
 获取json格式表示的密钥公钥，可用于jwk字段。

@@ -75,6 +75,19 @@ def process_order(domains: typing.Set[str], challenge_handler: ChallengeHandlerB
 
 此方法返回完成订单后从订单URL获取到的订单对象。
 
+### key_change
+
+更换ACME账户的密钥。
+
+```python
+key_change(self, new_key_file, password: str = '') -> None
+```
+
+`new_key_file`：新的账户密钥。<br>
+`password`：保护新密钥的密码。
+
+此方法完成后，会更换AcmeN的签名密钥，后续基于此AcmeN对象的操作均由新密钥签名。
+
 ### deactivate_account
 
 注销此密钥所对应的账户。
@@ -82,3 +95,7 @@ def process_order(domains: typing.Set[str], challenge_handler: ChallengeHandlerB
 ```python
 def deactivate_account():
 ```
+
+### query_kid
+
+获取密钥文件对应的Account URL。通过调用下层AcmeNetIO.query_kid实现。
