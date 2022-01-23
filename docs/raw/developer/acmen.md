@@ -75,6 +75,23 @@ def process_order(domains: typing.Set[str], challenge_handler: ChallengeHandlerB
 
 此方法返回完成订单后从订单URL获取到的订单对象。
 
+### revoke_cert
+
+吊销证书
+
+```python
+def revoke_cert(self, cert_file, reason: RevocationReason = None, challenge_handler: ChallengeHandlerBase = None):
+```
+
+`cert_file`：需要吊销的证书。
+`reason`：证书吊销原因，RevocationReason枚举中的一个成员，可以是None。
+`challenge_handler`：完成认证过程使用的Challenge Handler(如果需要)。
+
+有3种方式可以吊销证书：使用签发证书的账户签名吊销请求、签名吊销请求的账户对证书上的标识符(域名)有控制权、使用证书的私钥签名吊销请求<br>
+此方法会按照顺序尝试三种吊销方法，首先假定实例化AcmeN时传入的私钥是签发此证书的账户对应的私钥，并使用此密钥签名吊销请求(在jws protected header中使用kid)。<br>
+当发生错误时，若传入了challenge_handler参数，则尝试创建一个包含证书上所有标识符(域名)的订单，并完成订单中的认证(authorization)，然后签名吊销请求。<br>
+当发生错误或没有传入challenge_handler参数时，假定实例化AcmeN时传入的私钥是证书对应的私钥，使用此密钥签名吊销请求(在jws protected header中使用jwk)。
+
 ### key_change
 
 更换ACME账户的密钥。

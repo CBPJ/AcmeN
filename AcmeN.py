@@ -1,7 +1,6 @@
-import subprocess, json, sys, time, hashlib, re, logging, os, uuid, collections, enum, typing, base64, functools
+import subprocess, json, time, logging, collections, enum, typing, base64, functools
 
 import requests
-import dns.resolver
 from jwcrypto import jws, jwk
 from cryptography import x509
 from cryptography.hazmat import backends
@@ -9,10 +8,9 @@ from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import rsa, ec
 
 from ChallengeHandlers import ChallengeHandlerBase
-from DnsHandlers import *
 
 __version__ = '0.3.0'
-__all__ = ['SupportedCA', 'AcmeAction', 'AcmeNetIO', 'AcmeN', 'KeyType', 'KeyGenerationMethod']
+__all__ = ['SupportedCA', 'AcmeAction', 'AcmeNetIO', 'AcmeN', 'KeyType', 'KeyGenerationMethod', 'RevocationReason']
 
 AcmeResponse = collections.namedtuple('AcmeResponse', ('code', 'headers', 'content'))
 
@@ -49,6 +47,14 @@ class KeyType(enum.Enum):
 class KeyGenerationMethod(enum.Enum):
     CryptographyLib = enum.auto()
     OpenSSLCLI = enum.auto()
+
+
+class RevocationReason(enum.IntEnum):
+    Unspecified = 0
+    KeyCompromise = 1
+    AffiliationChanged = 3
+    Superseded = 4
+    CessationOfOperation = 5
 
 
 class AcmeNetIO:
@@ -265,6 +271,9 @@ class AcmeNetIO:
             # which is not a valid json object, so r.json() will fail.
             # And they say they are sending "application/json"....
             result = r.content.decode().replace('{{', '{').replace('}}', '}')
+            # certificate revocation will return empty body.
+            if len(r.content) == 0:
+                result = '{}'
             result = json.loads(result)
             result = AcmeResponse(r.status_code, r.headers, result)
         else:
@@ -310,14 +319,6 @@ class AcmeN:
 
         # Account params
         self.__netio = AcmeNetIO(key_file, key_passphrase, ca)
-
-        # DNS params
-        self.__DNS_TTL = 20
-        self.__NAME_SERVERS = ['8.8.8.8', '9.9.9.9', '1.1.1.1']
-
-        self.__OPENSSL_CONFIG_TEMPLATE = 'openssl_config_template.cfg'
-        self.__PERFORM_DNS_SELF_CHECK = True
-        self.__DNS_SELF_CHECK_RETRY = 10
 
     @staticmethod
     def __openssl(command, options, communicate=None):
@@ -630,287 +631,62 @@ class AcmeN:
         self.__log.info('Order is ready.')
         return r_order
 
-    def generate_csr(self, domain, key_file, key_pass='', dns_name: list = None):
-        self.__log.info('reading openssl config template: {0}'.format(self.__OPENSSL_CONFIG_TEMPLATE))
-        with open(self.__OPENSSL_CONFIG_TEMPLATE, 'r', encoding='utf8') as file:
-            template = file.read()
-        if not template.endswith('\n'):
-            template += '\n'
+    def revoke_cert(self, cert_file, reason: RevocationReason = None, challenge_handler: ChallengeHandlerBase = None):
+        """Revoke the given certificate
 
-        if dns_name:
-            dns_name_temp = []
-            for i in range(len(dns_name)):
-                dns_name_temp.append('DNS.{0} = {1}'.format(str(i), dns_name[i]))
-            template += '\n'.join(dns_name_temp)
-        else:
-            template += 'DNS.0 = {0}'.format(domain)
+        :param cert_file: The certificate file to be revoked.
+        :param reason: The revocation reason.
+        :param challenge_handler: The challenge handler to handler challenge when revoking certificate by authorization.
+        :return: None
+        """
 
-        temp_filename = str(uuid.uuid4())
-        self.__log.debug('openssl temp config filename: {0}'.format(temp_filename))
-        with open(temp_filename, 'w', encoding='utf8') as temp_file:
-            temp_file.write(template)
-
-        csr = self.__openssl('req', ['-new', '-batch',
-                                     '-key', key_file, '-passin', 'pass:{0}'.format(key_pass),
-                                     '-subj', '/CN={0}'.format(domain),
-                                     '-outform', 'der', '-text',
-                                     '-config', temp_filename
-                                     ])
-        os.remove(temp_filename)
-        index = csr.index(b'\x30\x82')
-        return csr[:index].decode(), csr[index:]
-
-    def __get_domains_from_csr(self, csr):
-        self.__log.info("Read CSR to find domains to validate.")
-        # csr = self.__openssl("req", ["-in", csr_file, "-noout", "-text"]).decode("utf8")
-        domains = set()
-        common_name = re.search(r"Subject:.*?\s+?CN\s*?=\s*?([^\s,;/]+)", csr)
-        if common_name is not None:
-            domains.add(common_name.group(1))
-        subject_alt_names = re.search(r"X509v3 Subject Alternative Name: \r?\n +([^\r\n]+)\r?\n", csr,
-                                      re.MULTILINE | re.DOTALL)
-        if subject_alt_names is not None:
-            for san in subject_alt_names.group(1).split(", "):
-                if san.startswith("DNS:"):
-                    domains.add(san[4:])
-        if len(domains) == 0:
-            raise ValueError("Didn't find any domain to validate in the provided CSR.")
-        return domains
-
-    def __get_domains_from_cert(self, cert_file):
-        self.__log.info("Read certificate to find domains.")
-        cert = self.__openssl("x509", ["-in", cert_file, "-noout", "-text"]).decode("utf8")
-        domains = set()
-        common_name = re.search(r"Subject:.*?\s+?CN\s*?=\s*?([^\s,;/]+)", cert)
-        if common_name is not None:
-            domains.add(common_name.group(1))
-        subject_alt_names = re.search(r"X509v3 Subject Alternative Name: \r?\n +([^\r\n]+)\r?\n", cert,
-                                      re.MULTILINE | re.DOTALL)
-        if subject_alt_names is not None:
-            for san in subject_alt_names.group(1).split(", "):
-                if san.startswith("DNS:"):
-                    domains.add(san[4:])
-        return domains
-
-    def __create_order(self, domains):
-        # Create order and return order's information and location
-        self.__log.info('Creating new order')
-
-        order_info = {"identifiers": [{"type": "dns", "value": i} for i in domains]}
-        response, order = self.__send_signed_request(self.__DIRECTORY['newOrder'], order_info)
-        if response.status_code == 201:
-            order_location = response.headers['Location']
-            self.__log.info('Order received: {0}'.format(order_location))
-            if order["status"] != "pending" and order["status"] != "ready":
-                raise ValueError("Order status is neither pending neither ready, we can't use it: {0}".format(order))
-        elif response.status_code == 403 and order["type"] == "urn:ietf:params:acme:error:userActionRequired":
-            raise ValueError(
-                "Order creation failed ({0}). Read Terms of Service ({1}), then follow your CA instructions: {2}".format(
-                    order["detail"], response.headers['Link'], order["instance"]))
-        else:
-            raise ValueError("Error getting new Order: {0} {1}".format(response.status_code, order))
-        return order, order_location
-
-    def __dns_self_check(self, dns_domain, value):
-        dns_domain += '.'
-        self.__log.info("Prepare DNS resolver.")
-        resolver = dns.resolver.Resolver(configure=False)
-        resolver.retry_servfail = True
-        resolver.nameservers = self.__NAME_SERVERS
-
-        challenge_verified = False
+        self.__log.info('Loading certificate file.')
+        with open(cert_file, 'rb') as file:
+            data = file.read()
         try:
-            self.__log.debug('sending dns query: {0}'.format(dns_domain))
-            for response in dns.resolver.resolve(dns_domain, rdtype='TXT').rrset:
-                self.__log.info("Found dns value {0}".format(response.to_text()))
-                challenge_verified = challenge_verified or response.to_text() == '"{0}"'.format(value)
-        except dns.exception.DNSException as dns_exception:
-            self.__log.info("DNS error occurred while checking challenge: {0} : {1}".format(
-                type(dns_exception).__name__, dns_exception))
-        return challenge_verified
+            self.__log.debug('Trying to load certificate as PEM format.')
+            crt = x509.load_pem_x509_certificate(data)
+        except ValueError:
+            self.__log.debug('Trying to load certificate as DER format.')
+            crt = x509.load_der_x509_certificate(data)
 
-    def __complete_challenge(self, order: dict, dns_operator: DNSHandlerBase = None):
-        dns_operator = dns_operator or DefaultDNSHandler()
-        dns_operator.session = self.__requests_session
+        payload = {
+            'certificate': base64.urlsafe_b64encode(crt.public_bytes(serialization.Encoding.DER)).decode().rstrip('=')
+        }
+        if reason is not None:
+            payload['reason'] = reason.value
 
-        if order['status'] == 'ready':
-            self.__log.info('No challenge to process: order is already ready')
+        try:
+            self.__log.info('Trying to revoke certificate by account.')
+            r = self.__netio.send_request(payload, AcmeAction.RevokeCertByAccountKey)
+            self.__log.info('Certificate revoked.')
             return
+        except RuntimeError as ex:
+            self.__log.debug(f'Revoke certificate by account failed: {str(ex)}')
 
-        for authz in order['authorizations']:
-            self.__log.info("Process challenge for authorization: {0}".format(authz))
-            response, authorization = self.__send_signed_request(authz, "")
-            if response.status_code != 200:
-                raise ValueError("Error fetching challenges: {0} {1}".format(response.status_code, authorization))
-            domain = authorization["identifier"]["value"]
+        if challenge_handler:
+            domains = set()
+            domains.add(crt.subject.get_attributes_for_oid(x509.oid.NameOID.COMMON_NAME)[0].value)
+            for i in crt.extensions.get_extension_for_class(x509.SubjectAlternativeName).value:
+                domains.add(i.value)
+            try:
+                self.__log.info('Trying to revoke certificate by authorization.')
+                self.process_order(domains, challenge_handler)
+                r = self.__netio.send_request(payload, AcmeAction.RevokeCertByAccountKey)
+                self.__log.info('Certificate revoked.')
+                return
+            except RuntimeError as ex:
+                self.__log.debug(f'Revoke certificate by account failed: {str(ex)}')
 
-            challenge = [c for c in authorization["challenges"] if c["type"] == "dns-01"][0]
-            token = re.sub(r"[^A-Za-z0-9_\-]", "_", challenge["token"])
-            key_authorization = "{0}.{1}".format(token, self.__THUMB_PRINT)
-            key_digest64 = self.__b64(hashlib.sha256(key_authorization.encode("utf8")).digest())
-            dns_domain = "_acme-challenge.{0}".format(domain)
-            self.__log.info('Setting DNS TXT record : \n{0}\n{1}'.format(dns_domain, key_digest64))
+        try:
+            self.__log.info('Trying to revoke certificate by private key.')
+            r = self.__netio.send_request(payload, AcmeAction.RevokeCertByCertKey)
+            self.__log.info('Certificate revoked.')
+            return
+        except RuntimeError as ex:
+            self.__log.debug(f'Revoke certificate by private key failed: {str(ex)}.')
 
-            set_result, record_id = dns_operator.set_record(dns_domain, key_digest64)
-            if not set_result:
-                self.__log.warning('auto set dns record filed, set it manually, press ENTER to continue: \n{0}\n{1}'
-                                   .format(dns_domain, key_digest64))
-                input()
-
-            if self.__PERFORM_DNS_SELF_CHECK:
-                self.__log.info(
-                    'Checking dns record, waiting 1 TTL ({0}s) before send dns query'.format(self.__DNS_TTL))
-                for i in range(self.__DNS_SELF_CHECK_RETRY):
-                    self.__log.debug('waiting 1 TTL ({0}s)'.format(self.__DNS_TTL))
-                    time.sleep(self.__DNS_TTL)
-                    if self.__dns_self_check(dns_domain, key_digest64):
-                        break
-                else:
-                    self.__log.warning('dns self check failed after {0} retries, press ENTER to continue'
-                                       .format(self.__DNS_SELF_CHECK_RETRY))
-                    input('')
-
-            self.__log.info("Asking ACME server to validate challenge")
-            response, result = self.__send_signed_request(challenge["url"], {"keyAuthorization": key_authorization})
-            if response.status_code != 200:
-                raise ValueError("Error triggering challenge: {0} {1}".format(response.status_code, result))
-
-            while True:
-                response, challenge_status = self.__send_signed_request(challenge["url"], "")
-                if response.status_code != 200:
-                    raise ValueError("Error during challenge validation: {0} {1}".format(
-                        response.status_code, challenge_status))
-                if challenge_status["status"] == "pending":
-                    time.sleep(2)
-                elif challenge_status["status"] == "valid":
-                    self.__log.info("ACME has verified challenge for domain: {0}".format(domain))
-                    break
-                else:
-                    raise ValueError("Challenge for domain {0} did not pass: {1}".format(domain, challenge_status))
-
-            self.__log.info('Deleting DNS TXT record : \n{0}\n{1}'.format(dns_domain, key_digest64))
-            # TODO: Auto get tld
-            del_result = dns_operator.del_record(dns_domain, key_digest64, record_id)
-            if not del_result:
-                self.__log.warning('failed to del dns record, del it manually, press ENTER to continue')
-                input()
-
-        self.__log.info('all challenge completed')
-
-    def __finalize_order(self, order: dict, order_location, csr_der):
-        self.__log.info("Request to finalize the order (all challenge have been completed)")
-
-        csr_der64 = self.__b64(csr_der)
-        response, result = self.__send_signed_request(order["finalize"], {"csr": csr_der64})
-        if response.status_code != 200:
-            raise ValueError("Error while sending the CSR: {0} {1}".format(response.status_code, result))
-
-        while True:
-            response, order = self.__send_signed_request(order_location, "")
-
-            if order["status"] == "processing":
-                if response.headers["Retry-After"]:
-                    time.sleep(int(response.headers["Retry-After"]))
-                else:
-                    time.sleep(2)
-            elif order["status"] == "valid":
-                self.__log.info("Order finalized!")
-                break
-            else:
-                raise ValueError("Finalizing order, got errors: {0}".format(order))
-
-        finalize_header = self.__POST_HEADER.copy()
-        finalize_header['Accept'] = self.__CERTIFICATE_FORMAT
-        response, result = self.__send_signed_request(order["certificate"], "", http_headers=finalize_header)
-        if response.status_code != 200:
-            raise ValueError("Finalizing order {0} got errors: {1}".format(response.status_code, result))
-
-        self.__log.info("Certificate signed and chain received: {0}".format(order["certificate"]))
-        return response.text
-
-    def __get_cert(self, csr_pem, csr_der, dns_handler: DNSHandlerBase):
-        kid, account_info = self._register_new_account()
-
-        if self.__CONTACT and set(account_info['contact']) != set(self.__CONTACT):
-            self.__update_contact_info(kid, self.__CONTACT)
-
-        csr_domains = self.__get_domains_from_csr(csr_pem)
-        order, order_location = self.__create_order(csr_domains)
-        self.__complete_challenge(order, dns_handler)
-        cert = self.__finalize_order(order, order_location, csr_der)
-        return cert
-
-    def get_cert_from_domain(self, domain, dns_name: list = None, cert_type='rsa', dns_handler: DNSHandlerBase = None):
-        filename = domain.replace('*', '_')
-        t = str(int(time.time()))
-        key_filename = '{0}.{1}.{2}.key'.format(filename, t, cert_type.lower())
-        cert_filename = '{0}.{1}.{2}.crt'.format(filename, t, cert_type.lower())
-
-        if cert_type.lower() == 'rsa':
-            self.__openssl('genrsa', ['-out', key_filename, '4096'])
-        elif cert_type.lower() == 'ecc':
-            self.__openssl('ecparam', ['-genkey', '-name', 'secp384r1', '-noout', '-out', key_filename])
-        else:
-            raise ValueError('Invalid cert type, only rsa and ecc are supported')
-        csr_pem, csr_der = self.generate_csr(domain, key_filename, '', dns_name)
-
-        cert = self.__get_cert(csr_pem, csr_der, dns_handler)
-        with open(cert_filename, 'w') as file:
-            file.write(cert)
-        sys.stdout.write(cert)
-
-    def get_cert_from_csr(self, csr_file: str, dns_handler: DNSHandlerBase = None):
-        if not os.path.exists(csr_file):
-            raise FileNotFoundError('csr file does not exist')
-
-        csr_pem = self.__openssl("req", ["-in", csr_file, "-noout", "-text"]).decode("utf8")
-        csr_der = self.__openssl("req", ["-in", csr_file, "-outform", "der"])
-        cert = self.__get_cert(csr_pem, csr_der, dns_handler)
-
-        cert_filename = '{0}.{1}.crt'.format(re.sub(r'(\.csr*)$', '', csr_file), str(int(time.time())))
-        with open(cert_filename, 'w') as file:
-            file.write(cert)
-        sys.stdout.write(cert)
-
-    def revoke_cert_by_account(self, cert_file, reason: int = 0, dns_handler: DNSHandlerBase = None):
-        self._register_new_account()
-        self.__log.info('Revoking certificate')
-        cert_der = self.__openssl('x509', ['-in', cert_file, '-outform', 'der'])
-        cert_der64 = self.__b64(cert_der)
-        revoke_request = {
-            'certificate': cert_der64,
-            'reason': reason
-        }
-        response, result = self.__send_signed_request(self.__DIRECTORY['revokeCert'], revoke_request)
-        if response.status_code == 403 and result['type'] == 'urn:ietf:params:acme:error:unauthorized':
-            self.__log.info('Server refused to revoke the certificate:{0} {1}, {2}'.format(
-                response.status_code, result['type'], result['detail'] if 'detail' in result else None))
-
-            domains = self.__get_domains_from_cert(cert_file)
-            self.__log.info('Trying to validate domains: {0}'.format(', '.join(domains)))
-            order, _ = self.__create_order(domains)
-            self.__complete_challenge(order, dns_handler)
-
-            self.__log.info('Revoking certificate (retry)')
-            response, result = self.__send_signed_request(self.__DIRECTORY['revokeCert'], revoke_request)
-        if response.status_code != 200:
-            raise ValueError("Error during revocation: {0} {1}".format(response.status_code, result))
-        self.__log.info('Certificate Revoked')
-
-    def revoke_cert_by_private_key(self, cert_file, private_key_file, key_password='', reason: int = 1):
-        self.__log.info('Revoking certificate')
-        jws_header, _ = self.__read_key(private_key_file, key_password)
-        cert_der = self.__openssl('x509', ['-in', cert_file, '-outform', 'der'])
-        cert_der64 = self.__b64(cert_der)
-        revoke_request = {
-            'certificate': cert_der64,
-            'reason': reason
-        }
-        response, result = self.__send_signed_request(self.__DIRECTORY['revokeCert'],
-                                                      revoke_request, sign_key=private_key_file, )
-        if response.status_code != 200:
-            raise ValueError("Error during revocation: {0} {1}".format(response.status_code, result))
-        self.__log.info('Certificate Revoked')
+        raise RuntimeError('Revoke certificate failed.')
 
     def key_change(self, new_key_file, password: str = '') -> None:
         """Change the account key of an ACME account.

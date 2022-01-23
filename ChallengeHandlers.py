@@ -3,7 +3,7 @@ import abc, base64, hashlib, functools, time
 import tld, requests, dns
 import AcmeN
 
-__all__ = ['CloudflareDnsHandler']
+__all__ = ['ChallengeHandlerBase', 'CloudflareDnsHandler']
 
 
 class ChallengeHandlerBase(abc.ABC):

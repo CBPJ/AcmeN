@@ -4,8 +4,7 @@ from functools import lru_cache
 import requests, tld
 
 __all__ = [
-    'DNSHandlerBase', 'DefaultDNSHandler', 'GoDaddyDNSHandler', 'TencentDNSHandler', 'CloudflareDNSHandler',
-    'AliyunDNSHandler'
+    'DNSHandlerBase', 'DefaultDNSHandler', 'GoDaddyDNSHandler', 'TencentDNSHandler', 'AliyunDNSHandler'
 ]
 
 
@@ -176,7 +175,7 @@ class TencentDNSHandler(DNSHandlerBase):
         res = self.session.post(self.__path, data=req, headers={})
         result = res.json()
         succeed = bool(res.status_code == 200 and result['code'] == 0)
-        return succeed , result['data']['record']['id'] if succeed else None
+        return succeed, result['data']['record']['id'] if succeed else None
 
     def del_record(self, dns_domain, value, record_id):
         name, domain = self.split_domain(dns_domain)
@@ -210,91 +209,6 @@ class TencentDNSHandler(DNSHandlerBase):
         res = self.session.post(self.__path, data=req, headers={})
         return res.status_code == 200 and res.json()['code'] == 0
         pass
-
-
-class CloudflareDNSHandler(DNSHandlerBase):
-    def __init__(self, api_token='', api_key: typing.Tuple[str, str] = None):
-        """
-        :param api_token: api token
-        :param api_key: tuple of (api_key, email)
-        """
-        if not bool(api_token) ^ bool(api_key):
-            raise ValueError('one of api_token and (api_key, email) must be provided')
-        self.__headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        }
-        if api_token:
-            self.__headers['Authorization'] = 'Bearer {0}'.format(api_token)
-        elif api_key:
-            self.__headers['X-Auth-Key'] = api_key[0]
-            self.__headers['X-Auth-Email'] = api_key[1]
-
-    @lru_cache
-    def __get_zone_id(self, domain):
-        res = self.session.get(f'https://api.cloudflare.com/client/v4/zones', params={'match': 'all', 'name': domain},
-                               headers=self.__headers, )
-        if res.status_code != 200:
-            raise ValueError(res.status_code, res.content.decode('utf8'))
-        result = res.json()
-        if len(result['result']) == 0:
-            raise ValueError('domain not exist')
-        elif len(result['result']) != 1:
-            raise ValueError('server returns {0} domains'.format(len(result['result'])))
-        return result['result'][0]['id']
-
-    def __get_record(self, domain, name):
-        zone_id = self.__get_zone_id(domain)
-        dns_domain = '.'.join([name, domain])
-        res = self.session.get(f'https://api.cloudflare.com/client/v4/zones/{zone_id}/dns_records',
-                               headers=self.__headers, params={'match': 'all', 'name': dns_domain, 'type': 'TXT'})
-        if res.status_code != 200:
-            raise ValueError(res.status_code, res.content.decode('utf8'))
-
-        result = res.json()
-        return result['result']
-
-    def __del_record_by_id(self, record_id, domain):
-        zone_id = self.__get_zone_id(domain)
-        res = self.session.delete(f'https://api.cloudflare.com/client/v4/zones/{zone_id}/dns_records/{record_id}',
-                                  headers=self.__headers)
-        return res.status_code == 200 and res.json()['result']['id'] == record_id
-
-    def set_record(self, dns_domain, value):
-        name, domain = self.split_domain(dns_domain)
-        data = {
-            'type': 'TXT',
-            'name': name,
-            'content': value,
-            'ttl': 120
-        }
-        zone_id = self.__get_zone_id(domain)
-        res = self.session.post(f'https://api.cloudflare.com/client/v4/zones/{zone_id}/dns_records',
-                                headers=self.__headers, json=data)
-        result = res.json()
-        succeed = bool(res.status_code == 200 and result['success'])
-        return succeed, result['result']['id'] if succeed else None
-
-    def del_record(self, dns_domain, value, record_id):
-        name, domain = self.split_domain(dns_domain)
-        records_to_delete = []
-        if record_id is not None:
-            records_to_delete.append(record_id)
-        else:
-            records = self.__get_record(domain, name)
-            for record in records:
-                if record['name'] == dns_domain and record['content'] == value:
-                    records_to_delete.append(record['id'])
-                elif (record['name'] == dns_domain) and (value is None) and (self.is_acme_challenge(record['content'])):
-                    records_to_delete.append(record['id'])
-
-        if len(records_to_delete) == 0:
-            return False
-
-        result = True
-        for record_id in records_to_delete:
-            result &= self.__del_record_by_id(record_id, domain)
-        return result
 
 
 class AliyunDNSHandler(DNSHandlerBase):
