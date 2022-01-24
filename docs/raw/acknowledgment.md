@@ -8,8 +8,7 @@ AcmeN使用了以下第三方Python库：
 - [requests](https://github.com/psf/requests)
 - [tld](https://github.com/barseghyanartur/tld)
 - [jwcrypto](https://github.com/latchset/jwcrypto)
-
-AcmeN使用[OpenSSL](https://openssl.org/)执行密码学操作。
+- [cryptography](https://cryptography.io)
 
 AcmeN文档使用[`mkdocs`](https://www.mkdocs.org)渲染。
 

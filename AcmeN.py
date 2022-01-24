@@ -9,8 +9,8 @@ from cryptography.hazmat.primitives.asymmetric import rsa, ec
 
 from ChallengeHandlers import ChallengeHandlerBase
 
-__version__ = '0.3.0'
-__all__ = ['SupportedCA', 'AcmeAction', 'AcmeNetIO', 'AcmeN', 'KeyType', 'KeyGenerationMethod', 'RevocationReason']
+__version__ = '0.4.0'
+__all__ = ['SupportedCA', 'AcmeNetIO', 'AcmeN', 'KeyType', 'KeyGenerationMethod', 'RevocationReason']
 
 AcmeResponse = collections.namedtuple('AcmeResponse', ('code', 'headers', 'content'))
 
