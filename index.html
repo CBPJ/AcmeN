@@ -14,7 +14,7 @@
 
   <link rel="stylesheet" href="css/theme.css" />
   <link rel="stylesheet" href="css/theme_extra.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
   
   <script>
     // Current page data
@@ -25,9 +25,8 @@
   
   <script src="js/jquery-2.1.1.min.js" defer></script>
   <script src="js/modernizr-2.8.3.min.js" defer></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
   <script>hljs.initHighlightingOnLoad();</script> 
-  
 </head>
 
 <body class="wy-body-for-nav" role="document">
@@ -41,7 +40,7 @@
         <a href="." class="icon icon-home"> AcmeN Docs</a>
         <div role="search">
   <form id ="rtd-search-form" class="wy-form" action="./search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+      <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
   </form>
 </div>
       </div>
@@ -54,52 +53,58 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#_2">安装依赖</a>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#acme">创建ACME账户</a>
+    </li>
     <li class="toctree-l2"><a class="reference internal" href="#_3">签发证书</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#_4">指定私钥位置</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#dnshandler">创建DNSHandler</a>
+    <li class="toctree-l3"><a class="reference internal" href="#acme_1">注册ACME账户及更改账户联系方式</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#_5">获取证书</a>
+    <li class="toctree-l3"><a class="reference internal" href="#ca">指定证书签发机构(CA)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#challengehandler">创建ChallengeHandler</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#_6">吊销证书</a>
+    <li class="toctree-l2"><a class="reference internal" href="#_5">吊销证书</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#_7">使用证书私钥吊销证书</a>
+    <li class="toctree-l3"><a class="reference internal" href="#_6">使用证书私钥吊销证书</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#_8">使用账户密钥吊销证书</a>
+    <li class="toctree-l3"><a class="reference internal" href="#_7">使用账户密钥吊销证书</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#_9">账户密钥轮换</a>
+    <li class="toctree-l2"><a class="reference internal" href="#_8">账户密钥轮换</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#_10">注销账户</a>
+    <li class="toctree-l2"><a class="reference internal" href="#_9">注销账户</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#godaddy-api">关于Godaddy API的特别说明</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#_11">其他用法</a>
+    <li class="toctree-l2"><a class="reference internal" href="#_10">其他用法</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#acme">使用其他ACME服务商</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#_12">使用不同密钥长度的数字证书</a>
+    <li class="toctree-l3"><a class="reference internal" href="#acme_2">使用其他ACME服务商</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#_13">查找旧版本的文档</a>
+    <li class="toctree-l2"><a class="reference internal" href="#_11">查找旧版本的文档</a>
     </li>
     </ul>
                     </li>
                 </ul>
+                <p class="caption"><span class="caption-text">开发</span></p>
                 <ul>
-                    <li class="toctree-l1"><a class="reference internal" href="developer/">开发者</a>
+                    <li class="toctree-l1"><a class="reference internal" href="developer/acme_net_io/">网络IO</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="developer/challenge_handlers/">ChallengeHandling</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="developer/acmen/">AcmeN</a>
                     </li>
                 </ul>
+                <p class="caption"><span class="caption-text">其他</span></p>
                 <ul>
                     <li class="toctree-l1"><a class="reference internal" href="acknowledgment/">致谢</a>
                     </li>
-                </ul>
-                <ul>
                     <li class="toctree-l1"><a class="reference internal" href="changelog/">ChangeLog</a>
                     </li>
                 </ul>
@@ -132,11 +137,12 @@
   
   <hr/>
 </div>
+
           <div role="main">
             <div class="section">
               
                 <h1 id="acmen">AcmeN<a class="headerlink" href="#acmen" title="Permanent link">&para;</a></h1>
-<p><a href="https://tools.ietf.org/html/rfc8555">RFC8555</a>自动证书管理环境Python客户端</p>
+<p><a href="https://tools.ietf.org/html/rfc8555">RFC8555</a> 自动证书管理环境Python客户端。</p>
 <h2 id="_1">特性<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
 <p>AcmeN实现了RFC8555中描述的以下特性：</p>
 <ul>
@@ -147,7 +153,7 @@
 <li>签发证书</li>
 <li>吊销证书</li>
 </ul>
-<p><strong>注意：</strong>我们尚未对AcmeN进行完整的测试，如需在生产环境中使用，你需要自行测试其可靠性。另外，AcmeN仍在开发阶段，<code>v0.*.*</code>版本无法严格保证API向后兼容性。</p>
+<p><strong>注意：</strong> 我们尚未对AcmeN进行完整的测试，如需在生产环境中使用，你需要自行测试其可靠性。另外，AcmeN仍在开发阶段，<code>v0.*.*</code>版本无法保证API向后兼容性。</p>
 <h2 id="_2">安装依赖<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
 <p>使用git克隆代码：</p>
 <pre><code class="language-bash">git clone https://github.com/CBPJ/AcmeN
@@ -156,127 +162,116 @@ pip install -r requirements.txt
 </code></pre>
 <p>或者手动下载解压后使用pip安装依赖</p>
 <p>然后打开<code>main.py</code>按照需要修改其中的代码并执行。</p>
-<p>另外，AcmeN依赖<a href="https://www.openssl.org/">OpenSSL</a>才能运行，请确保openssl在你的<code>PATH</code>变量中，如果你使用windows且没有安装openssl，你可以在<a href="https://github.com/CBPJ/AcmeN/releases/">Release</a>页面下载我们编译好的版本。对于Linux，你可以使用软件包管理器安装。</p>
+<h2 id="acme">创建ACME账户<a class="headerlink" href="#acme" title="Permanent link">&para;</a></h2>
+<pre><code class="language-python">acme = AcmeN('account.key', account_key_password='&lt;your_password&gt;')
+acme.register_account(contact=['mailto:xxx@yyy.zzz'])
+</code></pre>
+<p>这将在Let's Encrypt的ACME服务器上创建一个账户，并使用邮箱xxx@yyy.zzz作为联系方式。在进行接下来的大部分操作前，都需要一个ACME账户。当此密钥已经注册过账户时，此方法会更新contact信息，不会因账户已存在而发生异常。</p>
 <h2 id="_3">签发证书<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
-<p>AcmeN使用RFC8555规定的<code>dns-01</code>验证方式验证域名控制权，并通过调用DNS服务商的API更新或删除DNS记录。目前，AcmeN集成了Godaddy和腾讯云的API客户端。以Godaddy为例，<a href="https://github.com/CBPJ/AcmeN/blob/master/main.py"><code>main.py</code></a>中给出了签发证书的过程:</p>
+<p>AcmeN使用RFC8555规定的<code>dns-01</code>验证方式验证域名控制权，并通过调用DNS服务商的API更新或删除DNS记录。目前，AcmeN集成了Cloudflare的API客户端。以Cloudflare为例，<a href="https://github.com/CBPJ/AcmeN/blob/master/main.py"><code>main.py</code></a> 中给出了签发证书的过程:</p>
 <pre><code class="language-python">import logging
 from AcmeN import AcmeN
-from DnsHandlers import GoDaddyDNSHandler
+from ChallengeHandlers import CloudflareDnsHandler
 
 logging.basicConfig(level=logging.INFO)
+
+handler = CloudflareDnsHandler(api_token='*****')
 acme = AcmeN('account.key')
-dns = GoDaddyDNSHandler('sso-key *****:****')
-acme.get_cert_from_domain('foo.example.com', dns_name=['foo1.example.com', 'foo2.example.com'], cert_type='rsa', dns_handler=dns)
+acme.register_account(contact=['mailto:xxx@yyy.zzz'])
+acme.get_cert_by_domain('example.com', ['alt1.example.com', 'alt2.examplr.com'], handler)
 </code></pre>
+<p>这将使用<code>account.key</code>在默认CA(Let's Encrypt)注册一个ACME账户，使用<code>xxx@yyy.zzz</code>作为联系方式，并为example.com获取证书，且包含alt1.example.com和alt2.example.com两个可选名称(subjectAlternativeName)，并通过调用Cloudflare的DNS API来完成认证。<br>
+默认情况下，这将使用<a href="https://cryptography.io">Cryptography</a>库生成3072位RSA私钥，如果希望使用OpenSSL命令行生成私钥或者希望生成其他类型和长度的私钥，请参阅<a href="developer/acmen/#get_cert_by_domain">文档</a>。</p>
 <hr />
 <h3 id="_4">指定私钥位置<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
-<p>上述实例中，<code>account.key</code>代表账户私钥位置，如果此私钥尚未注册账户，在需要时会自动注册。</p>
-<p>如果账户私钥使用密码保护，可以在创建AcmeN实例时传入密码，如果希望设定账户的联系方式，也可以在此时设定。这两个参数都是可选的。</p>
-<pre><code class="language-python">acme = AcmeN('account.key', account_key_password='&lt;your_password&gt;', contact=['mailto:foo@example.com'])
+<p>上述实例中，<code>account.key</code>代表账户私钥位置。</p>
+<p>如果账户私钥使用密码保护，可以在创建AcmeN实例时传入密码。</p>
+<pre><code class="language-python">acme = AcmeN('account.key', account_key_password='&lt;your_password&gt;')
 </code></pre>
 <p>如果你没有账户私钥，可以使用OpenSSL生成：</p>
 <pre><code class="language-bash">openssl genrsa -out account.key 4096
 </code></pre>
 <hr />
-<h3 id="dnshandler">创建DNSHandler<a class="headerlink" href="#dnshandler" title="Permanent link">&para;</a></h3>
-<p>目前AcmeN内置了Godaddy、腾讯云、Cloudflare、阿里云的DNSHandler。</p>
-<p>使用Godaddy提供的DNS服务时，访问令牌以<code>sso-key</code>开头，创建<code>GodaddyDNSHandler</code>时传入即可。</p>
-<p>使用腾讯与提供的DNS服务时，访问令牌包括<code>secret_id</code>和<code>secret_key</code>两部分，创建<code>TencentDnsHandler</code>时传入。</p>
-<p>其他服务商：</p>
-<pre><code class="language-python">from DnsHandlers import *
-# Tencent:
-dns = TencentDNSHandler('&lt;your_secret_id&gt;', '&lt;your_secret_key&gt;')
-# Godaddy:
-dns = GodaddyDNSHandler('sso-key *****')
+<h3 id="acme_1">注册ACME账户及更改账户联系方式<a class="headerlink" href="#acme_1" title="Permanent link">&para;</a></h3>
+<pre><code class="language-python">acme = AcmeN('account.key')
+acme.register_account(contact=['mailto:xxx@yyy.zzz'])
+</code></pre>
+<p>此方法将注册新账户并将联系方式设置为xxx@yyy.zzz。若账户已存在，将更新联系方式为xxx@yyy.zzz。<br>
+此方法在账户已存在时不会发生异常。</p>
+<hr />
+<h3 id="ca">指定证书签发机构(CA)<a class="headerlink" href="#ca" title="Permanent link">&para;</a></h3>
+<p>AcmeN目前内置了来自3个CA机构的5个服务器。三个CA机构是：<a href="https://letsencrypt.org">Let's Encrypt</a>、<a href="https://www.buypass.com">BuyPass</a>、<a href="https://zerossl.com/">ZeroSSL</a>。</p>
+<pre><code class="language-python">acme = AcmeN('account.key', ca=SupportedCA.LETSENCRYPT)
+</code></pre>
+<p>ca的默认值是<code>SupportedCA.LETSENCRYPT</code>，其他有效值是：<code>SupportedCA.LETSENCRYPT</code>、<code>SupportedCA.BUYPASS</code>、<code>SupportedCA.ZEROSSL</code>、<code>SupportedCA.LETSENCRYPT_STAGING</code>、<code>SupportedCA.BUYPASS_STAGING</code>。</p>
+<hr />
+<h3 id="challengehandler">创建ChallengeHandler<a class="headerlink" href="#challengehandler" title="Permanent link">&para;</a></h3>
+<p>目前AcmeN内置了Cloudflare的DNS API，更多的ChallengeHandler将在未来添加。</p>
+<pre><code class="language-python">from ChallengeHandler import *
 # Cloudflare (APIToken):
 dns = CloudflareDNSHandler(api_token='&lt;your_token&gt;')
-# Cloudflare (APIKey):
-dns = CloudflareDNSHandler(api_key=('&lt;your_api_key&gt;', 'your_email'))
-# Aliyun:
-dns = AliyunDNSHandler('&lt;your_accesskey_id&gt;', '&lt;your_accesskey_secret&gt;')
-</code></pre>
-<p>如果你希望手动设置/删除DNS记录，可以跳过此步骤。另外，你也可以实现自己的DNSHandler。</p>
-<hr />
-<h3 id="_5">获取证书<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
-<p>有以下两种方式可以获取证书</p>
-<ul>
-<li>通过CSR文件获取证书：</li>
-</ul>
-<pre><code class="language-python">acme.get_cert_from_csr('&lt;path/to/csr_file&gt;', dns_handler=dns)
+
+另外，你也可以实现自己的ChallengeHandler。
+
+-----
+
+### 获取证书
+
+有以下两种方式可以获取证书
+
+- 通过CSR文件获取证书：
+
+```python
+acme.get_cert_by_csr('&lt;path/to/csr_file&gt;', dns_handler=dns)
 </code></pre>
 <ul>
 <li>通过域名获取证书：</li>
 </ul>
-<pre><code class="language-python">acme.get_cert_from_domain('foo.example.com', dns_name=['foo1.example.com', 'foo2.example.com'], cert_type='rsa', dns_handler=dns)
+<pre><code class="language-python">acme.get_cert_by_domain('foo.example.com', subject_alternative_name=['foo1.example.com', 'foo2.example.com'], key_type=KeyType.RSA3072, challenge_handler=dns)
 </code></pre>
-<p>其中<code>foo.example.com</code>是证书的CommonName，是唯一一个必须参数。<br />
-<code>dns_name</code>：DNS名称，指定DNS名称可以创建多域名证书，可选参数。<br />
-<code>cert_type</code>：证书类型，可以设置为<code>rsa</code>或<code>ecc</code>，设置为rsa时，将生成4096位RSA私钥，设置为ecc时，使用secp384r1曲线生成私钥。如果你希望使用不同的密钥长度，你需要修改代码。可选参数。<br />
-<code>dns_handler</code>：在上面步骤中创建的DNSHandler，如果你希望手动操作DNS记录，忽略此参数。可选参数。</p>
+<p>其中<code>foo.example.com</code>是证书的CommonName。<br />
+<code>subject_alternative_name</code>：DNS名称，指定DNS名称可以创建多域名证书，当不需要SAN时，可传入空列表<code>[]</code>。<br />
+<code>key_type</code>：证书类型，默认值是3072位RSA证书，你也可以选择使用KeyType.ECC384、KeyType.ECC256、KeyType.RSA4096、KeyType.RSA2048。其中ECC384和ECC256分别使用secp384r1和secp256r1(prime256v1)曲线。<br />
+<code>challenge_handler</code>：在上面步骤中创建的challenge_handler。</p>
 <hr />
 <p>正常情况下，AcmeN会生成：<br />
 密钥文件：<code>{域名}.{时间戳}.{密钥类型}.key</code><br />
 证书文件：<code>{域名}.{时间戳}.{密钥类型}.crt</code></p>
-<p>如果DNS记录操作失败，或者你没有传入<code>dns_handler</code>参数，AcmeN会在需要添加/删除DNS记录时停下来，你需要根据日志提示信息设置或删除DNS记录。完成后按<code>Enter</code>键继续。另外，在设置DNS记录后，通知Acme服务器验证记录前，AcmeN会尝试解析DNS记录，如果经过数次尝试后解析失败，你同样需要根据日志提示，等待DNS记录正确扩散后按<code>Enter</code>键继续运行。</p>
-<h2 id="_6">吊销证书<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
-<h3 id="_7">使用证书私钥吊销证书<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
-<pre><code class="language-python">acme.revoke_cert_by_private_key(cert_file, private_key_file, key_password='', reason=1)
+<h2 id="_5">吊销证书<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
+<h3 id="_6">使用证书私钥吊销证书<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
+<p>使用证书的私钥实例化AcmeN，并调用revoke_cert方法，传入证书文件的路径。</p>
+<pre><code class="language-python">acme = AcmeN('cert_private_key.key', ca=....)
+acme.revoke_cert(cert_file)
 </code></pre>
-<p><code>cert_file</code>：需要吊销的证书文件，必须参数。<br />
-<code>private_key_file</code>： 与证书文件对应的私钥，必须参数。<br />
-<code>key_password</code>：保护私钥的密码，可选参数。<br />
-<code>reason</code>：<a href="https://tools.ietf.org/html/rfc5280#section-5.3.1">RFC5280</a>规定的吊销原因，默认值是1，表示私钥泄露。可选参数。</p>
-<p>使用私钥吊销证书时，<code>AcmeN</code>的<code>accountkey</code>参数可以不写。</p>
+<p><code>cert_file</code>：需要吊销的证书文件的路径。<br /></p>
 <hr />
-<h3 id="_8">使用账户密钥吊销证书<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
-<pre><code class="language-python">acme.revoke_cert_by_private_key(self, cert_file, private_key_file, key_password='', reason:=1):
+<h3 id="_7">使用账户密钥吊销证书<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
+<pre><code class="language-python">acme = AcmeN('account.key', ca=....)
+acme.revoke_cert(cert_file, challenge_handler=handler):
 </code></pre>
-<p><code>cert_file</code>：需要吊销的证书文件，必须参数。<br />
-<code>private_key_file</code>： 账户私钥文件，必须参数。<br />
-<code>key_password</code>：保护私钥的密码，可选参数。<br />
-<code>reason</code>：<a href="https://tools.ietf.org/html/rfc5280#section-5.3.1">RFC5280</a>规定的吊销原因，默认值是1，表示私钥泄露。可选参数。</p>
-<p>在使用账户密钥吊销证书时，若Acme服务器缓存了对域名所有权的验证，则可以直接吊销。否则AcmeN会自动执行和签发证书相同的域名所有权验证流程。详情请见<a href="https://tools.ietf.org/html/rfc8555#section-7.6">RFC8555 Certificate Revocation</a></p>
-<h2 id="_9">账户密钥轮换<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h2>
+<p><code>cert_file</code>：需要吊销的证书文件路径。<br /></p>
+<p>在使用账户密钥吊销证书时，若Acme服务器缓存了对域名所有权的验证，或签发此证书的账户与当前账户是同一账户，则可以直接吊销。否则AcmeN会使用challenge_handler完成域名所有权验证，然后吊销证书。详情请见<a href="developer/acmen/#revoke_cert">文档</a>。</p>
+<h2 id="_8">账户密钥轮换<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h2>
 <p>以旧密钥创建AcmeN实例后，调用<code>key_change</code>方法：</p>
 <pre><code class="language-python">acme = AcmeN('old_key.key')
 acme.key_change(new_key_file, password='')
 </code></pre>
 <p><code>new_key_file</code>：新密钥文件<br />
 <code>password</code>：保护新密钥的密码</p>
-<h2 id="_10">注销账户<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h2>
+<h2 id="_9">注销账户<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h2>
 <pre><code class="language-python">acme.deactivate_account():
 </code></pre>
 <p><strong>注意：</strong> 根据<a href="https://tools.ietf.org/html/rfc8555#section-7.3.6">RFC8555 Account Deactivation</a>的规定，Acme<strong>不提供</strong>重新启用账户的方法。</p>
 <h2 id="godaddy-api">关于Godaddy API的特别说明<a class="headerlink" href="#godaddy-api" title="Permanent link">&para;</a></h2>
+<p><strong>调用Godaddy API的代码尚未从AcmeN的旧版本迁移。</strong></p>
 <p>由于<a href="https://developer.godaddy.com/doc/endpoint/domains#/">Godaddy Domain API v1</a>中并未提供删除DNS记录的方法，因此在使用<code>GodaddyDNSHandler</code>删除DNS记录时，我们采用了一种折中方案。这导致当你只有一条DNS记录时，将无法删除这条记录。在AcmeN第一次要求你手动删除记录时，你可以暂时忽略它，直接按<code>Enter</code>键继续，后续删除操作将可以正常运行，等程序结束后手动删除第一条记录。或者，你可以永久保留一条TXT记录。</p>
 <p>尽管我们在Godaddy域名管理器的网页版中发现了API v3提供了删除DNS记录的方法，但是Godaddy并没有公开发布API v3，我们也未找到相关文档，目前，AcmeN只使用已经公开发布的API接口。</p>
-<h2 id="_11">其他用法<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h2>
-<h3 id="acme">使用其他ACME服务商<a class="headerlink" href="#acme" title="Permanent link">&para;</a></h3>
-<p>默认情况下，AcmeN使用<a href="https://letsencrypt.org/">Let's Encrypt</a>提供的证书签发服务。但同时，AcmeN也内置了<a href="https://www.buypass.com/ssl/products/acme">buypass</a>的服务器地址。如需切换服务商，在<code>AcmeN.py</code>中找到：</p>
-<pre><code class="language-python"># ACME params
-# production
-self.__ACME_DIRECTORY = 'https://acme-v02.api.letsencrypt.org/directory'
-# self.__ACME_DIRECTORY = 'https://api.buypass.com/acme/directory'
-
-# staging
-# self.__ACME_DIRECTORY = 'https://acme-staging-02.api.letsencrypt.org/directory'
-# self.__ACME_DIRECTORY = 'https://api.test4.buypass.no/acme/directory'
+<h2 id="_10">其他用法<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h2>
+<h3 id="acme_2">使用其他ACME服务商<a class="headerlink" href="#acme_2" title="Permanent link">&para;</a></h3>
+<p>默认情况下，AcmeN使用<a href="https://letsencrypt.org/">Let's Encrypt</a> 提供的证书签发服务。但同时，AcmeN也内置了<a href="https://www.buypass.com/ssl/products/acme">buypass</a> 的服务器地址。如需使用其他服务商，可在实例化AcmeN时传入ACME服务器的Directory目录：</p>
+<pre><code class="language-python">acme = AcmeN('account.key', ca='https://acme.zerossl.com/v2/DV90')
 </code></pre>
-<p>注释letsencrypt的url改为使用buypass的即可。另外，AcmeN也内置了二者的测试环境，供测试使用。</p>
-<p>但是注意，AcmeN是为使用letsencrypt的服务而设计的，由于buypass也使用Acme协议，因此AcmeN与其兼容。但目前(2020.09.23)，buypass对384位ECC证书的支持并不完善，选择使用buypass API前，请使用其测试服务器测试兼容性。</p>
-<h3 id="_12">使用不同密钥长度的数字证书<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h3>
-<p>AcmeN默认使用4096位RSA密钥，或384位ECC密钥(secp384r1)。如果你希望使用不同的密钥长度，你可以自行生成密钥，并创建对应的CSR，然后通过CSR获取证书。</p>
-<p>也可以修改代码实现，在<code>AcmeN.py</code>中找到<code>get_cert_from_domain</code>方法：</p>
-<pre><code class="language-python">def get_cert_from_domain(self, domain, dns_name: list = None, cert_type='rsa', dns_handler: DNSHandlerBase = None):
-    # ....
-    if cert_type.lower() == 'rsa':
-        self.__openssl('genrsa', ['-out', key_filename, '4096'])
-    elif cert_type.lower() == 'ecc':
-        self.__openssl('ecparam', ['-genkey', '-name', 'secp384r1', '-noout', '-out', key_filename])
-    # ....
-</code></pre>
-<p>这是AcmeN使用Openssl生成证书私钥的逻辑，对于RSA证书，你可以将<code>'4096'</code>替换为你希望的长度，但注意不应低于2048。对于ECC证书，你可以将<code>'secp384r1'</code>替换为你希望使用的曲线。但是同样的，不恰当的曲线可能会引起程序异常，或者服务商拒绝签发证书，请在使用前进行测试。</p>
-<h2 id="_13">查找旧版本的文档<a class="headerlink" href="#_13" title="Permanent link">&para;</a></h2>
+<h2 id="_11">查找旧版本的文档<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h2>
 <p>目前我们暂未单独提供旧版本的文档，但文档与代码一同进行版本控制，你可以使用git检出之前的版本，在/docs目录下可找到对应的文档。目前文档使用<a href="https://www.mkdocs.org"><code>mkdocs</code></a>渲染，你可以使用mkdocs在/docs文件夹下构建html版本。</p>
               
             </div>
@@ -285,7 +280,7 @@ self.__ACME_DIRECTORY = 'https://acme-v02.api.letsencrypt.org/directory'
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="developer/" class="btn btn-neutral float-right" title="开发者">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="developer/acme_net_io/" class="btn btn-neutral float-right" title="网络IO">Next <span class="icon icon-circle-arrow-right"></span></a>
       
       
     </div>
@@ -296,7 +291,7 @@ self.__ACME_DIRECTORY = 'https://acme-v02.api.letsencrypt.org/directory'
   <div role="contentinfo">
     <!-- Copyright etc -->
     
-      <p>copyright (c) 2020 Huo Jiacheng</p>
+      <p>copyright (c) 2020-2022 Huo Jiacheng</p>
     
   </div>
 
@@ -311,15 +306,16 @@ self.__ACME_DIRECTORY = 'https://acme-v02.api.letsencrypt.org/directory'
   </div>
 
   <div class="rst-versions" role="note" aria-label="versions">
-    <span class="rst-current-version" data-toggle="rst-current-version">
-      
-      
-      
-        <span style="margin-left: 15px"><a href="developer/" style="color: #fcfcfc">Next &raquo;</a></span>
-      
-    </span>
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+    
+      <span><a href="developer/acme_net_io/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
 </div>
     <script>var base_url = '.';</script>
+    <script src="js/theme_extra.js" defer></script>
     <script src="js/theme.js" defer></script>
       <script src="search/main.js" defer></script>
     <script defer>
@@ -332,6 +328,6 @@ self.__ACME_DIRECTORY = 'https://acme-v02.api.letsencrypt.org/directory'
 </html>
 
 <!--
-MkDocs version : 1.1.2
-Build Date UTC : 2020-11-30 13:41:13.778375+00:00
+MkDocs version : 1.2.3
+Build Date UTC : 2022-01-24 09:43:34.072871+00:00
 -->

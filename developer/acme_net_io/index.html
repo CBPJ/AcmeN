@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  
+  
+  <link rel="shortcut icon" href="../../img/favicon.ico">
+  <title>网络IO - AcmeN Docs</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700" />
+
+  <link rel="stylesheet" href="../../css/theme.css" />
+  <link rel="stylesheet" href="../../css/theme_extra.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "\u7f51\u7edcIO";
+    var mkdocs_page_input_path = "developer/acme_net_io.md";
+    var mkdocs_page_url = null;
+  </script>
+  
+  <script src="../../js/jquery-2.1.1.min.js" defer></script>
+  <script src="../../js/modernizr-2.8.3.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+        <a href="../.." class="icon icon-home"> AcmeN Docs</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../..">主页</a>
+                    </li>
+                </ul>
+                <p class="caption"><span class="caption-text">开发</span></p>
+                <ul class="current">
+                    <li class="toctree-l1 current"><a class="reference internal current" href="./">网络IO</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#_1">实例化</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#url">请求类型判断与URL转换</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_2">属性</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#directory">directory</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#directory_url">directory_url</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#pubkey">pubkey</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#key_thumbprint">key_thumbprint</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_3">方法</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#sign_request">sign_request</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#send_request">send_request</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#query_kid">query_kid</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#_get_nonce">_get_nonce</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#_get_url">_get_url</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../challenge_handlers/">ChallengeHandling</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../acmen/">AcmeN</a>
+                    </li>
+                </ul>
+                <p class="caption"><span class="caption-text">其他</span></p>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../../acknowledgment/">致谢</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../../changelog/">ChangeLog</a>
+                    </li>
+                </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../..">AcmeN Docs</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../..">Docs</a> &raquo;</li>
+    
+      
+        
+          <li>开发 &raquo;</li>
+        
+      
+    
+    <li>网络IO</li>
+    <li class="wy-breadcrumbs-aside">
+      
+    </li>
+  </ul>
+  
+  <hr/>
+</div>
+
+          <div role="main">
+            <div class="section">
+              
+                <h1 id="acmenetio">AcmeNetIO<a class="headerlink" href="#acmenetio" title="Permanent link">&para;</a></h1>
+<p>AcmeNetIO 组件负责签名请求以及与ACME服务器交互。另外，在轮换密钥时，AcmeNetIO也用于对InnerJWS签名。<br>
+一个AcmeNetIO与一个私钥相对应，并使用此私钥对请求进行签名。<br></p>
+<h2 id="_1">实例化<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<pre><code class="language-python">n = AcmeNetIO(keyfile, password=None, ca=SupportedCA.LETSENCRYPT, session=None)
+</code></pre>
+<p><code>keyfile</code>：用于签名的密钥文件。<br>
+<code>password</code>：保护密钥文件的密码，可选。<br>
+<code>ca</code>：使用的CA服务器，可以是SupportedCA枚举的一个成员，也可以是ACME服务的Directory URL，默认使用Let's Encrypt服务，可选。<br>
+<code>session</code>：共享的requests.Session对于，AcmeNetIO可以与外部代码共享一个Session，若没有提供共享Session，会自动创建一个新的Session，可选。</p>
+<p>在实例化时，init方法创建session，并读取密钥文件。若在实例化时传入session参数，则不会更新此session的header。</p>
+<h2 id="url">请求类型判断与URL转换<a class="headerlink" href="#url" title="Permanent link">&para;</a></h2>
+<p>上层代码通过向send_request或sign_request传递一个AcmeAction枚举来传入请求类型。sign_request通过此枚举来构建适当的protected header。<br>
+除VariableUrlAction外，AcmeAction中每个成员对应的请求url都可以从directory中找到，例如NewAccount、NewOrder。对于这类请求，只需传入action参数即可。<br>
+一些请求，例如获取订单信息，其URL包含在服务器对上一个请求的响应中。上层代码负责解析此类URL，并将action设为VariableUrlAction，通过url传入实际要请求的地址。<br>
+当action被设为VariableUrlAction时，protected header将使用kid而不是jwk参数。</p>
+<p>最长调用栈为：<br>
+上层代码 -&gt; send_request() -&gt; sign_request() -&gt; _get_url() -&gt; directory</p>
+<h2 id="_2">属性<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<h3 id="directory">directory<a class="headerlink" href="#directory" title="Permanent link">&para;</a></h3>
+<p>获取指定CA的ACME Directory。由于CA参数在AcmeNetIO的整个生命周期中不会改变，因此仅在第一次使用directory的值时向ACME服务器查询数据。后续将使用第一次查询的结果。</p>
+<h3 id="directory_url">directory_url<a class="headerlink" href="#directory_url" title="Permanent link">&para;</a></h3>
+<p>指定CA的Direcorty URL。</p>
+<h3 id="pubkey">pubkey<a class="headerlink" href="#pubkey" title="Permanent link">&para;</a></h3>
+<p>获取json格式表示的密钥公钥，可用于jwk字段。</p>
+<h3 id="key_thumbprint">key_thumbprint<a class="headerlink" href="#key_thumbprint" title="Permanent link">&para;</a></h3>
+<p>获取密钥的SHA256指纹。</p>
+<h2 id="_3">方法<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
+<h3 id="sign_request">sign_request<a class="headerlink" href="#sign_request" title="Permanent link">&para;</a></h3>
+<pre><code class="language-python">s = AcmeNetIO(...).sign_request(payload, action, url=None)
+</code></pre>
+<p><code>payload</code>：jws中要进行签名的payload，可以是字典(dict)或字符串(str)。当且仅当对POST-as-GET请求进行签名时，payload是一个空字符串。<br>
+<code>action</code>：要发送的ACME请求类型，AcmeNetIO据此构建jws的protected header。必须是AcmeAction枚举的成员。<br>
+<code>url</code>：自定义URL，当action是VariableUrlAction时，通过此参数指定目的URL。</p>
+<p>对传入的payload进行签名，此方法最常用于签名keyChange请求的InnerJWS或用于调试。其他请求可直接使用send_request。</p>
+<h3 id="send_request">send_request<a class="headerlink" href="#send_request" title="Permanent link">&para;</a></h3>
+<pre><code class="language-python">r = AcmeNetIO(...).send_request(pyload, action, url=None, deserialize_response=True)
+</code></pre>
+<p><code>deserialize_response</code>：是否将服务器响应转换为json对象(通常是字典)，在大部分情况下，ACME服务器响应都是json格式，只需在获取证书时将此参数设置为False。<br>
+参数与sign_request相同。向ACME服务器发送action指定的请求，并通过命名元组<code>AcmeResponse</code>返回<code>code</code>(状态码)、<code>headers</code>(HTTP响应头，其中Replay-Nonce头已被移除)、<code>content</code>(json反序列化后的响应体，通常是字典(dict))<br>
+send_request方法会截留Replay-Nonce头并将其加入缓存。获取和添加Replay-Nonce对高层代码是透明的。<br>
+当HTTP状态码不在200-399之间时，会引发RuntimeError异常。</p>
+<h3 id="query_kid">query_kid<a class="headerlink" href="#query_kid" title="Permanent link">&para;</a></h3>
+<p>获取密钥文件对应的Account URL。当账户不存在时，会由send_request引发RuntimeError。</p>
+<h3 id="_get_nonce">_get_nonce<a class="headerlink" href="#_get_nonce" title="Permanent link">&para;</a></h3>
+<p>获取一个Replay-Nonce，若没有缓存的Nonce，则向ACME服务器请求新的Nonce。</p>
+<h3 id="_get_url">_get_url<a class="headerlink" href="#_get_url" title="Permanent link">&para;</a></h3>
+<p>获取与AcmeAction对应的请求URL。</p>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../challenge_handlers/" class="btn btn-neutral float-right" title="ChallengeHandling">Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href="../.." class="btn btn-neutral" title="主页"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+      <p>copyright (c) 2020-2022 Huo Jiacheng</p>
+    
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../.." style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../challenge_handlers/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script>var base_url = '../..';</script>
+    <script src="../../js/theme_extra.js" defer></script>
+    <script src="../../js/theme.js" defer></script>
+      <script src="../../search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  
+  
+  <link rel="shortcut icon" href="../../img/favicon.ico">
+  <title>ChallengeHandling - AcmeN Docs</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700" />
+
+  <link rel="stylesheet" href="../../css/theme.css" />
+  <link rel="stylesheet" href="../../css/theme_extra.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "ChallengeHandling";
+    var mkdocs_page_input_path = "developer/challenge_handlers/index.md";
+    var mkdocs_page_url = null;
+  </script>
+  
+  <script src="../../js/jquery-2.1.1.min.js" defer></script>
+  <script src="../../js/modernizr-2.8.3.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+        <a href="../.." class="icon icon-home"> AcmeN Docs</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../..">主页</a>
+                    </li>
+                </ul>
+                <p class="caption"><span class="caption-text">开发</span></p>
+                <ul class="current">
+                    <li class="toctree-l1"><a class="reference internal" href="../acme_net_io/">网络IO</a>
+                    </li>
+                    <li class="toctree-l1 current"><a class="reference internal current" href="./">ChallengeHandling</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#challengehandlerbase">ChallengeHandlerBase</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#get_handler_type">get_handler_type 抽象方法</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#pre_handle">pre_handle 抽象方法</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#handle">handle 抽象方法</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#post_handle">post_handle 抽象方法</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#dns01handler">Dns01Handler</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#txt_value">txt_value 静态方法</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#check_txt_record">check_txt_record 方法</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#set_record">set_record 抽象方法</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#del_record">del_record 抽象方法</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cloudflarednshandler">CloudflareDnshandler</a>
+    </li>
+    </ul>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../acmen/">AcmeN</a>
+                    </li>
+                </ul>
+                <p class="caption"><span class="caption-text">其他</span></p>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../../acknowledgment/">致谢</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../../changelog/">ChangeLog</a>
+                    </li>
+                </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../..">AcmeN Docs</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../..">Docs</a> &raquo;</li>
+    
+      
+        
+          <li>开发 &raquo;</li>
+        
+      
+    
+    <li>ChallengeHandling</li>
+    <li class="wy-breadcrumbs-aside">
+      
+    </li>
+  </ul>
+  
+  <hr/>
+</div>
+
+          <div role="main">
+            <div class="section">
+              
+                <h1 id="challenge-handling">Challenge Handling<a class="headerlink" href="#challenge-handling" title="Permanent link">&para;</a></h1>
+<p>ChallengeHandlers的结构如下：</p>
+<p><img alt="ChallengeHandler's Structure" src="ChallengeHandler.drawio.svg" /></p>
+<p>ChanllengeHandlerBase是所有Handler的基类，定义了<code>pre_handle</code>、<code>handle</code>、<code>post_handle</code>三个抽象方法。pre_handle保留备用。handle()用于设置网络资源以满足ACME服务器的"挑战"要求，post_handle用于完成认证后解除这些网络资源。</p>
+<h2 id="challengehandlerbase">ChallengeHandlerBase<a class="headerlink" href="#challengehandlerbase" title="Permanent link">&para;</a></h2>
+<h3 id="get_handler_type">get_handler_type 抽象方法<a class="headerlink" href="#get_handler_type" title="Permanent link">&para;</a></h3>
+<p>获取此Handler可为指定的域名处理何种类型的"挑战"，与<a href="https://datatracker.ietf.org/doc/html/rfc8555#section-9.7.8">RFC8555 section-9.7.8</a> 对应，通常是http-01、dns-01、tls-alpn-01。</p>
+<pre><code class="language-python">def get_handler_type(domain) -&gt; str
+</code></pre>
+<p><code>domain</code>: 指定的域名。<br>
+返回可为此域名处理何种挑战。</p>
+<h3 id="pre_handle">pre_handle 抽象方法<a class="headerlink" href="#pre_handle" title="Permanent link">&para;</a></h3>
+<p>保留备用，所有子类应当实现此方法但不进行任何操作。</p>
+<h3 id="handle">handle 抽象方法<a class="headerlink" href="#handle" title="Permanent link">&para;</a></h3>
+<p>handle方法用于设置"挑战"所需的网络资源。</p>
+<pre><code class="language-python">def handle(url, identifier, token, key_thumbprint) -&gt; bool
+</code></pre>
+<p><code>url</code>：Challenge的URL，通常可唯一确定一个Challenge。<br>
+<code>identifier</code>：identifier的value。通常是等待认证的域名。<br>
+<code>token</code>：服务器为此Challenge指定的token，用来计算key authorization。见<a href="https://datatracker.ietf.org/doc/html/rfc8555#section-8.1">RFC8555 section-8.1</a> 。<br>
+<code>key_thumbprint</code>：账户密钥的指纹，与token一起，用于计算key authorization。</p>
+<p>handle方法返回True或False，指示"挑战"所需的网络资源是否被成功设置。</p>
+<h3 id="post_handle">post_handle 抽象方法<a class="headerlink" href="#post_handle" title="Permanent link">&para;</a></h3>
+<p>post_handle方法用于撤销为满足挑战所设置的网络资源。</p>
+<pre><code class="language-python">def post_handle(url, identifier, token, key_thumbprint, succeed) -&gt; bool
+</code></pre>
+<p><code>succeed</code>：之前的handle方法是否成功。<br>
+其余参数与handle相同。</p>
+<p>post_handle方法应返回True或False，指示资源是否被成功撤销。</p>
+<h2 id="dns01handler">Dns01Handler<a class="headerlink" href="#dns01handler" title="Permanent link">&para;</a></h2>
+<p>用于处理<code>dns-01</code>挑战。</p>
+<p>Dns01Handler是一个抽象基类，包含set_record和del_record两个抽象方法。handle方法会调用set_record方法，post_handle方法调用del_record方法。<br>
+<code>handle</code>方法将待处理的域名(id_value)分割成子域名和一级域名，并在子域名前加上<code>_acme-challenge.</code>前缀，计算满足挑战所需的TXT记录的值，传递给子类的set_record方法。<code>post_handle</code>方法进行同样的操作，并传递给子类的del_record方法。</p>
+<p>考虑到有些DNS服务商使用唯一ID来标识一个DNS记录，大部分可通过此ID来删除对应的记录。Dns01Handler添加了record_id机制来简化此过程：<br>
+set_record方法可返回所设置的DNS记录的ID，此返回值会原样传递给del_record方法的record_id参数。<br>
+若set_record方法的返回值的真值判断为真，即<code>bool(set_record(...)) == True</code>，则此操作被认为是成功的，handle方法将返回True。同时在一个字典中建立从挑战url到此返回值的映射关系。post_handle方法被调用时，从此字典中弹出(pop)此返回值，作为record_id参数传递给del_record方法。若字典中不存在与之对应的返回值，record_id将传入None。</p>
+<h3 id="txt_value">txt_value 静态方法<a class="headerlink" href="#txt_value" title="Permanent link">&para;</a></h3>
+<p>计算TXT记录的值。<code>{token}.{key_thumbprint}</code>计算sha256哈希值，再用base64_url编码，去掉末尾填充的等号<code>=</code>。</p>
+<h3 id="check_txt_record">check_txt_record 方法<a class="headerlink" href="#check_txt_record" title="Permanent link">&para;</a></h3>
+<p>向DNS服务器查询指定域名的TXT记录，并检查DNS服务器返回的结果与预期值是否相符。目前此方法使用['8.8.8.8', '1.1.1.1', '9.9.9.9']作为DNS服务器。</p>
+<pre><code class="language-python">def check_txt_record(self, domain: str, value: str) -&gt; bool
+</code></pre>
+<p><code>domain</code>：要检查TXT记录的的域名。<br>
+<code>value</code>：预期的TXT记录值。</p>
+<p>check_txt_record方法返回DNS服务器记录的TXT值与预期值是否相符。</p>
+<h3 id="set_record">set_record 抽象方法<a class="headerlink" href="#set_record" title="Permanent link">&para;</a></h3>
+<p>设置DNS TXT记录。</p>
+<pre><code class="language-python">def set_record(subdomain, fld, value)
+</code></pre>
+<p><code>subdomain</code>：需要设置记录的子域名，已附加_acme-challenge.前缀。<br>
+<code>fld</code>：需要设置记录的一级域名。<br>
+<code>value</code>：需要设置的TXT记录值。</p>
+<p>例如，需要认证的域名是abc.def.example.co.uk，则subdomain是abc.def，fld是example.co.uk。</p>
+<p>当设置成功时，若DNS服务商提供记录ID，应返回记录ID，若不提供则返回True。当设置失败时应返回False。</p>
+<h3 id="del_record">del_record 抽象方法<a class="headerlink" href="#del_record" title="Permanent link">&para;</a></h3>
+<p>删除DNS TXT记录</p>
+<pre><code class="language-python">def del_record(subdomain, fld, value, record_id)
+</code></pre>
+<p>其余参数与set_record相同<br>
+<code>record_id</code>：set_record返回的记录ID，注意对一个挑战，此参数只会被传递一次。例如<br></p>
+<pre><code class="language-python">handler.handle(url, 'examplr.org', token, thumbprint)
+handler.post_handle(url, 'examplr.org', token, thumbprint, True)
+handler.post_handle(url, 'examplr.org', token, thumbprint, True)
+</code></pre>
+<p>则第二次调用post_handle进而调用del_record时，此次调用的record_id参数将为None。</p>
+<p>删除成功返回True，失败返回False。</p>
+<h2 id="cloudflarednshandler">CloudflareDnshandler<a class="headerlink" href="#cloudflarednshandler" title="Permanent link">&para;</a></h2>
+<p>处理托管在Cloudflare上的域名的dns-01挑战。</p>
+<pre><code class="language-python">c = CloudflareDnsHandler(api_token)
+</code></pre>
+<p><code>api_token</code>：Cloudflare API-Token，我们已删除对API-Key的支持。</p>
+<p>API-Token需要Zone.Zone.Read和Zone.DNS.Edit权限。前者用于通过域名获取Zone ID，后者用于编辑DNS记录。</p>
+<p><strong>注意：</strong> 若在调用del_record时提供了record_id，则del_record方法将直接删除此ID对应的记录，不检查value是否与DNS记录值相同。</p>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../acmen/" class="btn btn-neutral float-right" title="AcmeN">Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href="../acme_net_io/" class="btn btn-neutral" title="网络IO"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+      <p>copyright (c) 2020-2022 Huo Jiacheng</p>
+    
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../acme_net_io/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../acmen/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script>var base_url = '../..';</script>
+    <script src="../../js/theme_extra.js" defer></script>
+    <script src="../../js/theme.js" defer></script>
+      <script src="../../search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>

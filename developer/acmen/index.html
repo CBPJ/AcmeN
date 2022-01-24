@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  
+  
+  <link rel="shortcut icon" href="../../img/favicon.ico">
+  <title>AcmeN - AcmeN Docs</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700" />
+
+  <link rel="stylesheet" href="../../css/theme.css" />
+  <link rel="stylesheet" href="../../css/theme_extra.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "AcmeN";
+    var mkdocs_page_input_path = "developer/acmen.md";
+    var mkdocs_page_url = null;
+  </script>
+  
+  <script src="../../js/jquery-2.1.1.min.js" defer></script>
+  <script src="../../js/modernizr-2.8.3.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+        <a href="../.." class="icon icon-home"> AcmeN Docs</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../..">主页</a>
+                    </li>
+                </ul>
+                <p class="caption"><span class="caption-text">开发</span></p>
+                <ul class="current">
+                    <li class="toctree-l1"><a class="reference internal" href="../acme_net_io/">网络IO</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../challenge_handlers/">ChallengeHandling</a>
+                    </li>
+                    <li class="toctree-l1 current"><a class="reference internal current" href="./">AcmeN</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#_1">实例化</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_2">方法</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#register_account">register_account</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#get_cert_by_domain">get_cert_by_domain</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#get_cert_by_csr">get_cert_by_csr</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#process_order">process_order</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#revoke_cert">revoke_cert</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#key_change">key_change</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#deactivate_account">deactivate_account</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#query_kid">query_kid</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                    </li>
+                </ul>
+                <p class="caption"><span class="caption-text">其他</span></p>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../../acknowledgment/">致谢</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../../changelog/">ChangeLog</a>
+                    </li>
+                </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../..">AcmeN Docs</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../..">Docs</a> &raquo;</li>
+    
+      
+        
+          <li>开发 &raquo;</li>
+        
+      
+    
+    <li>AcmeN</li>
+    <li class="wy-breadcrumbs-aside">
+      
+    </li>
+  </ul>
+  
+  <hr/>
+</div>
+
+          <div role="main">
+            <div class="section">
+              
+                <h1 id="acmen">AcmeN<a class="headerlink" href="#acmen" title="Permanent link">&para;</a></h1>
+<p>AcmeN封装了常见的ACME操作的时序控制。通过调用AcmeNetIO，完成常见的ACME操作。</p>
+<h2 id="_1">实例化<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<pre><code class="language-python">acmen = AcmeN(key_file, key_passphrase='', ca=SupportedCA.LETSENCRYPT)
+</code></pre>
+<p><code>key_file</code>：执行签名时将使用的私钥文件。<br>
+<code>key_passphrase</code>：保护私钥文件的短语，若私钥未加密可留空。<br>
+<code>ca</code>：要使用的ACME服务器，可以是SupportedCA枚举的一个成员，也可以是其他有效ACME服务器的directory目录地址。</p>
+<h2 id="_2">方法<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<h3 id="register_account">register_account<a class="headerlink" href="#register_account" title="Permanent link">&para;</a></h3>
+<p>使用实例化时指定的私钥注册ACME账户。</p>
+<pre><code class="language-python">def register_account(contact: typing.List[str] = None, eab_key_identifier: str = None, eab_mac_key: str = None) -&gt; str
+</code></pre>
+<p><code>contact</code>：此账户的联系方式列表，例如<code>['mailto:admin@example.com', 'mailto:admin2@example.com']</code>，可选。<br>
+<code>eab_key_identifier</code>：外部密钥绑定(externalKeyBinding)使用的key identifier。<br>
+<code>eab_mac_key</code>：外部密钥绑定(externalKeyBinding)使用的mac key。</p>
+<p>此方法返回账户的URL。</p>
+<h3 id="get_cert_by_domain">get_cert_by_domain<a class="headerlink" href="#get_cert_by_domain" title="Permanent link">&para;</a></h3>
+<p>通过域名获取证书。</p>
+<pre><code class="language-python">get_cert_by_domain(common_name: str, subject_alternative_name: typing.List[str],
+                   challenge_handler: ChallengeHandlerBase,
+                   key_generation_method: KeyGenerationMethod = KeyGenerationMethod.CryptographyLib,
+                   key_type: KeyType = KeyType.RSA3072, output_name: str = '') -&gt; (bytes, bytes):
+</code></pre>
+<p><code>common_name</code>：证书的commonName字段，通常是主域名。<br>
+<code>subject_alternative_name</code>：证书的subjectAlternativeName字段，可选的附加域名，不需要此扩展时可传入空列表<code>[]</code>。<br>
+<code>challenge_handler</code>：完成认证过程使用的Challenge Handler。<br>
+<code>key_generation_method</code>：生成私钥的方法，默认使用<a href="https://cryptography.io">cryptography</a>库生成，改为KeyGenerationMethod.OpenSSLCLI可使用openssl 命令行工具生成。<br>
+<code>key_type</code>：密钥类型，KeyType枚举的成员，默认是RSA3072。其中ECC384使用的是secp384r1曲线，ECC256使用的是secp256r1曲线。<br>
+<code>output_name</code>：输出的证书文件绝对或相对路径，当参数是空字符串<code>''</code>时，输出文件名是<code>{commonName}.{timestamp}.key</code>和<code>{commonName}.{timestamp}.crt</code>，当参数是<code>None</code>时，证书不会被写入文件。</p>
+<p>此方法返回(私钥,证书)二元组，均是PEM字节序列(bytes)。</p>
+<h3 id="get_cert_by_csr">get_cert_by_csr<a class="headerlink" href="#get_cert_by_csr" title="Permanent link">&para;</a></h3>
+<p>通过CSR文件获取证书。</p>
+<pre><code class="language-python">def get_cert_by_csr(csr: typing.Union[str, bytes], challenge_handler: ChallengeHandlerBase, output_name: str = None) -&gt; bytes:
+</code></pre>
+<p><code>csr</code>：CSR文件的路径或文件内容，当传入文件内容时既可以是str也可以是bytes。<br>
+<code>challenge_handler</code>：完成认证过程使用的Challenge Handler。<br>
+<code>output_name</code>：输出的证书文件绝对或相对路径，当参数是空字符串<code>''</code>时，输出文件名是<code>{commonName}.{timestamp}.crt</code>，当参数是<code>None</code>时，证书不会被写入文件。</p>
+<p>此方法返回服务器所签发的证书的bytes字节序列。</p>
+<h3 id="process_order">process_order<a class="headerlink" href="#process_order" title="Permanent link">&para;</a></h3>
+<p>创建一个证书订单并完成其中的认证。</p>
+<pre><code class="language-python">def process_order(domains: typing.Set[str], challenge_handler: ChallengeHandlerBase) -&gt; AcmeResponse
+</code></pre>
+<p><code>domains</code>：订单所包含的域名集合(Set)。<br>
+<code>challenge_handler</code>：完成认证过程使用的Challenge Handler。</p>
+<p>此方法返回完成订单后从订单URL获取到的订单对象。</p>
+<h3 id="revoke_cert">revoke_cert<a class="headerlink" href="#revoke_cert" title="Permanent link">&para;</a></h3>
+<p>吊销证书</p>
+<pre><code class="language-python">def revoke_cert(self, cert_file, reason: RevocationReason = None, challenge_handler: ChallengeHandlerBase = None):
+</code></pre>
+<p><code>cert_file</code>：需要吊销的证书。
+<code>reason</code>：证书吊销原因，RevocationReason枚举中的一个成员，可以是None。
+<code>challenge_handler</code>：完成认证过程使用的Challenge Handler(如果需要)。</p>
+<p>有3种方式可以吊销证书：使用签发证书的账户签名吊销请求、签名吊销请求的账户对证书上的标识符(域名)有控制权、使用证书的私钥签名吊销请求<br>
+此方法会按照顺序尝试三种吊销方法，首先假定实例化AcmeN时传入的私钥是签发此证书的账户对应的私钥，并使用此密钥签名吊销请求(在jws protected header中使用kid)。<br>
+当发生错误时，若传入了challenge_handler参数，则尝试创建一个包含证书上所有标识符(域名)的订单，并完成订单中的认证(authorization)，然后签名吊销请求。<br>
+当发生错误或没有传入challenge_handler参数时，假定实例化AcmeN时传入的私钥是证书对应的私钥，使用此密钥签名吊销请求(在jws protected header中使用jwk)。</p>
+<h3 id="key_change">key_change<a class="headerlink" href="#key_change" title="Permanent link">&para;</a></h3>
+<p>更换ACME账户的密钥。</p>
+<pre><code class="language-python">key_change(self, new_key_file, password: str = '') -&gt; None
+</code></pre>
+<p><code>new_key_file</code>：新的账户密钥。<br>
+<code>password</code>：保护新密钥的密码。</p>
+<p>此方法完成后，会更换AcmeN的签名密钥，后续基于此AcmeN对象的操作均由新密钥签名。</p>
+<h3 id="deactivate_account">deactivate_account<a class="headerlink" href="#deactivate_account" title="Permanent link">&para;</a></h3>
+<p>注销此密钥所对应的账户。</p>
+<pre><code class="language-python">def deactivate_account():
+</code></pre>
+<h3 id="query_kid">query_kid<a class="headerlink" href="#query_kid" title="Permanent link">&para;</a></h3>
+<p>获取密钥文件对应的Account URL。通过调用下层AcmeNetIO.query_kid实现。</p>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../../acknowledgment/" class="btn btn-neutral float-right" title="致谢">Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href="../challenge_handlers/" class="btn btn-neutral" title="ChallengeHandling"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+      <p>copyright (c) 2020-2022 Huo Jiacheng</p>
+    
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../challenge_handlers/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../../acknowledgment/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script>var base_url = '../..';</script>
+    <script src="../../js/theme_extra.js" defer></script>
+    <script src="../../js/theme.js" defer></script>
+      <script src="../../search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>

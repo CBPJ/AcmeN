@@ -14,7 +14,7 @@
 
   <link rel="stylesheet" href="../css/theme.css" />
   <link rel="stylesheet" href="../css/theme_extra.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
   
   <script>
     // Current page data
@@ -25,9 +25,8 @@
   
   <script src="../js/jquery-2.1.1.min.js" defer></script>
   <script src="../js/modernizr-2.8.3.min.js" defer></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
   <script>hljs.initHighlightingOnLoad();</script> 
-  
 </head>
 
 <body class="wy-body-for-nav" role="document">
@@ -41,7 +40,7 @@
         <a href=".." class="icon icon-home"> AcmeN Docs</a>
         <div role="search">
   <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+      <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
   </form>
 </div>
       </div>
@@ -51,20 +50,26 @@
                     <li class="toctree-l1"><a class="reference internal" href="..">主页</a>
                     </li>
                 </ul>
+                <p class="caption"><span class="caption-text">开发</span></p>
                 <ul>
-                    <li class="toctree-l1"><a class="reference internal" href="../developer/">开发者</a>
+                    <li class="toctree-l1"><a class="reference internal" href="../developer/acme_net_io/">网络IO</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../developer/challenge_handlers/">ChallengeHandling</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../developer/acmen/">AcmeN</a>
                     </li>
                 </ul>
-                <ul>
+                <p class="caption"><span class="caption-text">其他</span></p>
+                <ul class="current">
                     <li class="toctree-l1"><a class="reference internal" href="../acknowledgment/">致谢</a>
                     </li>
-                </ul>
-                <ul class="current">
                     <li class="toctree-l1 current"><a class="reference internal current" href="./">ChangeLog</a>
     <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#v020">v0.2.0</a>
+    <li class="toctree-l2"><a class="reference internal" href="#v040">v0.4.0</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#v030">v0.3.0</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#v020">v0.2.0</a>
     </li>
     </ul>
                     </li>
@@ -89,6 +94,10 @@
     <li><a href="..">Docs</a> &raquo;</li>
     
       
+        
+          <li>其他 &raquo;</li>
+        
+      
     
     <li>ChangeLog</li>
     <li class="wy-breadcrumbs-aside">
@@ -98,10 +107,20 @@
   
   <hr/>
 </div>
+
           <div role="main">
             <div class="section">
               
                 <h1 id="changelog">ChangeLog<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<h2 id="v040">v0.4.0<a class="headerlink" href="#v040" title="Permanent link">&para;</a></h2>
+<p><strong>重构代码，包含(很多很多)向后不兼容的更改</strong>
+- 如果你以前曾使用过AcmeN，请重新阅读文档并重写相关调用。
+- <strong>在v1.0.0发布以前，很可能还会有其他不兼容更改</strong></p>
+<h2 id="v030">v0.3.0<a class="headerlink" href="#v030" title="Permanent link">&para;</a></h2>
+<p><strong>包含向后不兼容的更改</strong>
+- 添加AliyunDNSHandler
+- 为DNSHandler添加了request_id处理机制，对于使用唯一ID标识解析记录的服务商，删除流程将更加快速
+- 更新文档</p>
 <h2 id="v020">v0.2.0<a class="headerlink" href="#v020" title="Permanent link">&para;</a></h2>
 <ul>
 <li>添加CloudflareDNSHandler</li>
@@ -110,11 +129,6 @@
 <li>AcmeN退出时将关闭session会话</li>
 <li>从AcmeN中移除了LogHandler</li>
 </ul>
-<h2 id="v030">v0.3.0<a class="headerlink" href="#v030" title="Permanent link">&para;</a></h2>
-<p><strong>包含向后不兼容的更改</strong>
-- 添加AliyunDNSHandler
-- 为DNSHandler添加了request_id处理机制，对于使用唯一ID标识解析记录的服务商，删除流程将更加快速
-- 更新文档</p>
               
             </div>
           </div>
@@ -133,7 +147,7 @@
   <div role="contentinfo">
     <!-- Copyright etc -->
     
-      <p>copyright (c) 2020 Huo Jiacheng</p>
+      <p>copyright (c) 2020-2022 Huo Jiacheng</p>
     
   </div>
 
@@ -148,15 +162,16 @@
   </div>
 
   <div class="rst-versions" role="note" aria-label="versions">
-    <span class="rst-current-version" data-toggle="rst-current-version">
-      
-      
-        <span><a href="../acknowledgment/" style="color: #fcfcfc;">&laquo; Previous</a></span>
-      
-      
-    </span>
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../acknowledgment/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+  </span>
 </div>
     <script>var base_url = '..';</script>
+    <script src="../js/theme_extra.js" defer></script>
     <script src="../js/theme.js" defer></script>
       <script src="../search/main.js" defer></script>
     <script defer>
