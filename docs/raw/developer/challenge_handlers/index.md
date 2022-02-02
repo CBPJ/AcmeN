@@ -113,7 +113,7 @@ handler.post_handle(url, 'examplr.org', token, thumbprint, True)
 
 删除成功返回True，失败返回False。
 
-## CloudflareDnshandler
+## CloudflareDnsHandler
 
 处理托管在Cloudflare上的域名的dns-01挑战。
 
@@ -126,3 +126,14 @@ c = CloudflareDnsHandler(api_token)
 API-Token需要Zone.Zone.Read和Zone.DNS.Edit权限。前者用于通过域名获取Zone ID，后者用于编辑DNS记录。
 
 **注意：** 若在调用del_record时提供了record_id，则del_record方法将直接删除此ID对应的记录，不检查value是否与DNS记录值相同。
+
+## GodaddyDnsHandler
+
+处理托管在Godaddy上的域名的dns-01挑战。
+
+```python
+g = GodaddyDnsHandler(api_key, api_secret)
+```
+
+`api_key`：API key中的"key"字段。<br>
+`api_secret`：API key中的"secret"字段

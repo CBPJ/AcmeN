@@ -1,9 +1,9 @@
 import abc, base64, hashlib, functools, time
 
-import tld, requests, dns
-import AcmeN
+import tld, requests, dns.resolver
 
-__all__ = ['ChallengeHandlerBase', 'CloudflareDnsHandler']
+__all__ = ['ChallengeHandlerBase', 'CloudflareDnsHandler', 'GodaddyDnsHandler']
+__version__ = '0.4.1'
 
 
 class ChallengeHandlerBase(abc.ABC):
@@ -154,7 +154,7 @@ class CloudflareDnsHandler(Dns01Handler):
         headers = {
             'Content-type': 'application/json',
             'Accept': 'application/json',
-            'User-Agent': f'AcmeN/{AcmeN.__version__}',
+            'User-Agent': f'AcmeN/{__version__}',
             'Authorization': f'Bearer {api_token}'
         }
         self.__session.headers.update(headers)
@@ -205,3 +205,60 @@ class CloudflareDnsHandler(Dns01Handler):
             raise RuntimeError('No matching record.')
         else:
             return self.del_record(subdomain, fld, value, result[0]['id'])
+
+
+class GodaddyDnsHandler(Dns01Handler):
+    def __init__(self, api_key: str, api_secret: str):
+        """A dns-01 handler using Godaddy API.
+
+        :param api_key: The "key" of your api key.
+        :param api_secret: The "secret" of your api key.
+        """
+        super().__init__()
+        self.__session = requests.Session()
+        headers = {
+            'Content-type': 'application/json',
+            'Accept': 'application/json',
+            'User-Agent': f'AcmeN/{__version__}',
+            'Authorization': f'sso-key {api_key}:{api_secret}'
+        }
+        self.__session.headers.update(headers)
+        self.__api_url = 'https://api.godaddy.com/v1'
+
+    def set_record(self, subdomain, fld, value):
+        payload = [
+            {
+                'data': value,
+                'name': subdomain,
+                'ttl': 600,
+                'type': 'TXT'
+            }
+        ]
+        r = self.__session.patch(f'{self.__api_url}/domains/{fld}/records', json=payload)
+        if r.status_code != 200:
+            raise RuntimeError(f'Set record for {subdomain}.{fld} failed: {r.status_code} {r.reason}, {r.text}')
+
+        # Godaddy API does not have RecordID.
+        return str(time.time())
+
+    def del_record(self, subdomain, fld, value, record_id) -> bool:
+        # get dns records
+        r = self.__session.get(f'{self.__api_url}/domains/{fld}/records/TXT/{subdomain}')
+        if not r.ok:
+            raise RuntimeError(f'Failed to query dns record from Godaddy. {r.status_code} {r.reason}, {r.text}')
+        domains = r.json()
+
+        if len(domains) == 0:
+            raise RuntimeError(f'No record for {subdomain}.{fld}.')
+
+        # delete matching record from domains. send the remains as PUT payload.
+        payload = [i for i in domains if i['data'] != value and value is not None]
+        if len(payload) == 0:
+            r = self.__session.delete(f'{self.__api_url}/domains/{fld}/records/TXT/{subdomain}')
+        elif len(payload) != len(domains):
+            r = self.__session.put(f'{self.__api_url}/domains/{fld}/records/TXT/{subdomain}', json=payload)
+        else:  # len(payload) == len(domains)
+            raise RuntimeError('No record matching the given value.')
+        if not r.ok:
+            raise RuntimeError(f'Failed to delete record {subdomain}.{fld}. {r.status_code} {r.reason}, {r.text}')
+        return True
