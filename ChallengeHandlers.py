@@ -1,4 +1,5 @@
-import abc, base64, hashlib, functools, time
+import abc, base64, hashlib, functools, time, datetime, uuid, hmac
+from urllib.parse import quote
 
 import tld, requests, dns.resolver
 
@@ -261,4 +262,86 @@ class GodaddyDnsHandler(Dns01Handler):
             raise RuntimeError('No record matching the given value.')
         if not r.ok:
             raise RuntimeError(f'Failed to delete record {subdomain}.{fld}. {r.status_code} {r.reason}, {r.text}')
+        return True
+
+
+class AliyunDnsHandler(Dns01Handler):
+    def __init__(self, access_key_id, access_key_secret):
+        """A dns-01 handler using Aliyun API.
+
+        :param access_key_id: The AccessKey ID.
+        :param access_key_secret: The AccessKey Secret.
+        """
+        super().__init__()
+        self.__base_url = 'https://alidns.aliyuncs.com'
+        self.__key_id = access_key_id
+        self.__key_secret = access_key_secret + '&'
+        self.__session = requests.Session()
+        headers = {
+            'Accept': 'application/json',
+            'User-Agent': f'AcmeN/{__version__}',
+        }
+        self.__session.headers.update(headers)
+
+    def __sign_request(self, req: dict):
+        params = {
+            'Format': 'JSON',
+            'Version': '2015-01-09',
+            'AccessKeyId': self.__key_id,
+            'SignatureMethod': 'HMAC-SHA1',
+            'Timestamp': f'{datetime.datetime.utcnow().isoformat("T", "seconds")}Z',
+            'SignatureVersion': '1.0',
+            'SignatureNonce': str(uuid.uuid4())
+        }
+        params.update(req)
+        string_to_sign = [f'{quote(k, safe="~")}={quote(params[k], safe="~")}' for k in sorted(params)]
+        string_to_sign = "&".join(string_to_sign)
+        string_to_sign = f'POST&%2F&{quote(string_to_sign)}'
+        signature = hmac.new(self.__key_secret.encode('utf8'), msg=string_to_sign.encode('utf8'), digestmod='sha1').digest()
+        params['Signature'] = base64.b64encode(signature)
+        return params
+
+    def set_record(self, subdomain, fld, value):
+        req = {
+            'Action': 'AddDomainRecord',
+            'DomainName': fld,
+            'RR': subdomain,
+            'Type': 'TXT',
+            'Value': value
+        }
+        req = self.__sign_request(req)
+        r = self.__session.post(self.__base_url, data=req)
+        if not r.ok:
+            raise RuntimeError(f'Set record for {subdomain}.{fld} failed: {r.status_code} {r.reason}, {r.text}')
+        return r.json()['RecordId']
+
+    def del_record(self, subdomain, fld, value, record_id) -> bool:
+        if not record_id:
+            req = {
+                'Action': 'DescribeDomainRecords',
+                'DomainName': fld,
+                'SearchMode': 'EXACT',
+                'KeyWord': subdomain,
+                'TypeKeyWord': 'TXT'
+            }
+            r = self.__session.post(self.__base_url, data=self.__sign_request(req))
+            if not r.ok:
+                raise RuntimeError(f'Failed to query records: {subdomain}.{fld}, {r.status_code} {r.reason} {r.text}')
+            r = r.json()['DomainRecords']['Record']
+            records_to_delete = [i['RecordId'] for i in r
+                                 if i['RR'] == subdomain and (i['Value'] == value or value is None)]
+        else:
+            records_to_delete = [record_id]
+
+        if len(records_to_delete) == 0:
+            raise RuntimeError('No matching record.')
+
+        for i in records_to_delete:
+            req = {
+                'Action': 'DeleteDomainRecord',
+                'RecordId': i
+            }
+            r = self.__session.post(self.__base_url, data=self.__sign_request(req))
+            if not r.ok:
+                raise RuntimeError(f'Failed to delete record: {i}, {r.status_code} {r.reason} {r.text}')
         return True

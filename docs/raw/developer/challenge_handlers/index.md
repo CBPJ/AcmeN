@@ -137,3 +137,14 @@ g = GodaddyDnsHandler(api_key, api_secret)
 
 `api_key`：API key中的"key"字段。<br>
 `api_secret`：API key中的"secret"字段
+
+## AliyunDnsHandler
+
+处理托管在Aliyun上的域名的dns-01挑战。
+
+```python
+g = AliyunDnsHandler(access_key_id, access_key_secret)
+```
+
+`access_key_id`：Aliyun提供的AccessKey ID。<br>
+`access_key_secret`：Aliyun提供的AccessKey Secret。
