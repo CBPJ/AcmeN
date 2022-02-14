@@ -400,6 +400,8 @@ class AcmeN:
         :return: The tuple of (private_key, certificate) both in pem format.
         """
 
+        common_name = common_name.encode('idna').decode()
+        subject_alternative_name = [i.encode('idna').decode() for i in subject_alternative_name]
         # generate private key
         if not isinstance(key_type, KeyType):
             raise TypeError('key_type must be a member of KeyType enum.')
@@ -452,7 +454,7 @@ class AcmeN:
                                 serialization.PrivateFormat.PKCS8,
                                 serialization.NoEncryption())
         if output_name is not None:
-            output_name = output_name or f'{common_name}.{str(int(time.time()))}'
+            output_name = output_name or f'{common_name.encode().decode("idna")}.{str(int(time.time()))}'
             # write private key
             with open(f'{output_name}.key', 'wb') as file:
                 file.write(key)
@@ -530,7 +532,7 @@ class AcmeN:
         # TODO: send download-certificate request using 'Accept: application/pem-certificate-chain' header.
         r_cert = self.__netio.send_request('', AcmeAction.VariableUrlAction, r_order.content['certificate'], False)
         if output_name is not None:
-            output_name = output_name or f'{cn}.{str(int(time.time()))}.crt'
+            output_name = output_name or f'{cn.encode().decode("idna")}.{str(int(time.time()))}.crt'
             with open(output_name, 'wb') as file:
                 file.write(r_cert.content)
         return r_cert.content

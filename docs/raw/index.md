@@ -210,3 +210,10 @@ acme = AcmeN('account.key', ca='https://acme.zerossl.com/v2/DV90')
 ## 查找旧版本的文档
 
 目前我们暂未单独提供旧版本的文档，但文档与代码一同进行版本控制，你可以使用git检出之前的版本，在/docs目录下可找到对应的文档。目前文档使用[`mkdocs`](https://www.mkdocs.org)渲染，你可以使用mkdocs在/docs文件夹下构建html版本。
+
+## 国际化域名(IDN)
+
+*目前AcmeN提供实验性国际化域名支持
+
+非英语域名会使用punycode转义后传递给ACME服务器，默认输出文件名仍然是原文。当使用CSR申请证书时，若CSR中包含经punycode编码的CommonName，确定默认输出文件名时会将CN中punycode编码的域名转义回非英语域名。<br>
+我并未测试IDN与DNS服务商API的兼容性，而且并不是所有ACME服务商都同意签发IDN证书。
