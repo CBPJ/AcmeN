@@ -148,3 +148,14 @@ g = AliyunDnsHandler(access_key_id, access_key_secret)
 
 `access_key_id`：Aliyun提供的AccessKey ID。<br>
 `access_key_secret`：Aliyun提供的AccessKey Secret。
+
+## DnspodDnsHandler
+
+处理托管在腾讯云Dnspod上的域名的dns-01挑战。
+
+```python
+g = DnspodDnsHandler(secret_id, secret_key)
+```
+
+`secret_id`: 腾讯云提供的SecretId<br>
+`secret_key`: 腾讯云提供的SecretKey

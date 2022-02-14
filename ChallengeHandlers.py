@@ -1,9 +1,15 @@
-import abc, base64, hashlib, functools, time, datetime, uuid, hmac
+import abc, base64, hashlib, functools, time, datetime, uuid, hmac, json
 from urllib.parse import quote
 
 import tld, requests, dns.resolver
 
-__all__ = ['ChallengeHandlerBase', 'CloudflareDnsHandler', 'GodaddyDnsHandler']
+__all__ = [
+    'ChallengeHandlerBase',
+    'CloudflareDnsHandler',
+    'GodaddyDnsHandler',
+    'AliyunDnsHandler',
+    'DnspodDnsHandler'
+]
 __version__ = '0.4.1'
 
 
@@ -297,7 +303,8 @@ class AliyunDnsHandler(Dns01Handler):
         string_to_sign = [f'{quote(k, safe="~")}={quote(params[k], safe="~")}' for k in sorted(params)]
         string_to_sign = "&".join(string_to_sign)
         string_to_sign = f'POST&%2F&{quote(string_to_sign)}'
-        signature = hmac.new(self.__key_secret.encode('utf8'), msg=string_to_sign.encode('utf8'), digestmod='sha1').digest()
+        signature = hmac.new(self.__key_secret.encode('utf8'), msg=string_to_sign.encode('utf8'),
+                             digestmod='sha1').digest()
         params['Signature'] = base64.b64encode(signature)
         return params
 
@@ -343,5 +350,89 @@ class AliyunDnsHandler(Dns01Handler):
             }
             r = self.__session.post(self.__base_url, data=self.__sign_request(req))
             if not r.ok:
+                raise RuntimeError(f'Failed to delete record: {i}, {r.status_code} {r.reason} {r.text}')
+        return True
+
+
+class DnspodDnsHandler(Dns01Handler):
+    def __init__(self, secret_id, secret_key):
+        super().__init__()
+        self.__session = requests.Session()
+        self.__secret_id = secret_id
+        self.__secret_key = secret_key
+
+    def send_request(self, action: str, params: dict) -> requests.Response:
+        timestamp = int(time.time())
+        date = datetime.datetime.utcfromtimestamp(timestamp).strftime('%Y-%m-%d')
+        headers = {
+            'Content-Type': 'application/json; charset=utf-8',
+            'Host': 'dnspod.tencentcloudapi.com',
+            'X-TC-Action': action,
+            'X-TC-Timestamp': str(timestamp),
+            'X-TC-Version': '2021-03-23'
+        }
+        payload = json.dumps(params)
+        canonical_request = [
+            'POST',
+            '/',
+            '',
+            ''.join([f'{i.lower()}:{headers[i].lower()}\n' for i in sorted(headers, key=str.lower)]),
+            ';'.join([i.lower() for i in sorted(headers, key=str.lower)]),
+            hashlib.sha256(payload.encode('utf8')).hexdigest()
+        ]
+        canonical_request = '\n'.join(canonical_request)
+
+        string_to_sign = [
+            'TC3-HMAC-SHA256',
+            str(timestamp),
+            f'{date}/dnspod/tc3_request',
+            hashlib.sha256(canonical_request.encode('utf8')).hexdigest()
+        ]
+        string_to_sign = '\n'.join(string_to_sign)
+        sign_key = hmac.new(f'TC3{self.__secret_key}'.encode(), msg=date.encode(), digestmod='sha256').digest()
+        sign_key = hmac.new(sign_key, msg=b'dnspod', digestmod='sha256').digest()
+        sign_key = hmac.new(sign_key, msg=b'tc3_request', digestmod='sha256').digest()
+        signature = hmac.new(sign_key, msg=string_to_sign.encode(), digestmod='sha256').hexdigest()
+
+        headers['Authorization'] = f'TC3-HMAC-SHA256 Credential={self.__secret_id}/{date}/dnspod/tc3_request, ' \
+                                   f'SignedHeaders={";".join([i.lower() for i in sorted(headers, key=str.lower)])}, ' \
+                                   f'Signature={signature}'
+        return self.__session.post('https://dnspod.tencentcloudapi.com', data=payload, headers=headers)
+
+    def set_record(self, subdomain, fld, value):
+        params = {
+            'Domain': fld,
+            'RecordType': 'TXT',
+            'RecordLine': '默认',
+            'Value': value,
+            'SubDomain': subdomain
+        }
+        r = self.send_request('CreateRecord', params)
+        if not r.ok or 'Error' in r.json()['Response']:
+            raise RuntimeError(f'Set record for {subdomain}.{fld} failed: {r.status_code} {r.reason}, {r.text}')
+        return r.json()['Response']['RecordId']
+
+    def del_record(self, subdomain, fld, value, record_id) -> bool:
+        if not record_id:
+            params = {
+                'Domain': fld,
+                'Subdomain': subdomain,
+                'RecordType': 'TXT'
+            }
+            r = self.send_request('DescribeRecordList', params)
+            if not r.ok or 'Error' in r.json()['Response']:
+                raise RuntimeError(f'Failed to query records: {subdomain}.{fld}, {r.status_code} {r.reason} {r.text}')
+            r = r.json()['Response']['RecordList']
+            records_to_delete = [i['RecordId'] for i in r
+                                 if i['Value'] == value or value is None]
+        else:
+            records_to_delete = [record_id]
+
+        if len(records_to_delete) == 0:
+            raise RuntimeError('No matching record.')
+
+        for i in records_to_delete:
+            r = self.send_request('DeleteRecord', {'Domain': fld, 'RecordId': i})
+            if not r.ok or 'Error' in r.json()['Response']:
                 raise RuntimeError(f'Failed to delete record: {i}, {r.status_code} {r.reason} {r.text}')
         return True
