@@ -8,7 +8,8 @@ __all__ = [
     'CloudflareDnsHandler',
     'GodaddyDnsHandler',
     'AliyunDnsHandler',
-    'DnspodDnsHandler'
+    'DnspodDnsHandler',
+    'HandlerSet'
 ]
 __version__ = '0.4.1'
 
@@ -16,11 +17,11 @@ __version__ = '0.4.1'
 class ChallengeHandlerBase(abc.ABC):
 
     @abc.abstractmethod
-    def get_handler_type(self, domain: str) -> str:
-        """Get handler type of the domain.
+    def get_handler_type(self, identifier: str) -> str:
+        """Get handler type of the identifier.
 
-        :param domain: The domain.
-        :return: Which type of challenge this handler can handle for the domain.
+        :param identifier: The identifier in the ACME authorization object.
+        :return: Which type of challenge this handler can handle for this identifier.
         """
         pass
 
@@ -93,7 +94,7 @@ class Dns01Handler(ChallengeHandlerBase):
             return False
         return bool(value in records)
 
-    def get_handler_type(self, domain: str):
+    def get_handler_type(self, identifier: str):
         return 'dns-01'
 
     def pre_handle(self):
@@ -436,3 +437,48 @@ class DnspodDnsHandler(Dns01Handler):
             if not r.ok or 'Error' in r.json()['Response']:
                 raise RuntimeError(f'Failed to delete record: {i}, {r.status_code} {r.reason} {r.text}')
         return True
+
+
+class HandlerSet(ChallengeHandlerBase):
+    def __init__(self, default_handler: ChallengeHandlerBase = None):
+        super().__init__()
+        self.__default_handler = default_handler
+        # map from domain to handler
+        self.__handlers = {}  # type: dict[str, ChallengeHandlerBase]
+
+    @property
+    def default_handler(self) -> ChallengeHandlerBase:
+        return self.__default_handler
+
+    @default_handler.setter
+    def default_handler(self, value: ChallengeHandlerBase):
+        self.__default_handler = value
+
+    def get_handler_type(self, identifier: str) -> str:
+        identifier = tld.get_tld(identifier, as_object=True, fix_protocol=True).fld
+        return self[identifier].get_handler_type(identifier)
+
+    def pre_handle(self):
+        pass
+
+    def handle(self, url, identifier, token, key_thumbprint) -> bool:
+        domain = tld.get_tld(identifier, as_object=True, fix_protocol=True).fld
+        return self[domain].handle(url, identifier, token, key_thumbprint)
+
+    def post_handle(self, url, identifier, token, key_thumbprint, succeed) -> bool:
+        domain = tld.get_tld(identifier, as_object=True, fix_protocol=True).fld
+        return self[domain].post_handle(url, identifier, token, key_thumbprint, succeed)
+
+    def __setitem__(self, domain: str, handler: ChallengeHandlerBase):
+        self.__handlers[domain] = handler
+
+    def __getitem__(self, domain: str):
+        handler = self.__handlers.get(domain, self.__default_handler)
+        if handler is None:
+            raise KeyError(f'No handler exist for domain: {domain}')
+        return handler
+
+    def __delitem__(self, domain):
+        not_exist = []
+        if self.__handlers.pop(domain, not_exist) is not_exist:
+            raise KeyError(f'No handler exist for domain: {domain}')

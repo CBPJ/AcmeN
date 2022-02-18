@@ -4,20 +4,22 @@ ChallengeHandlers的结构如下：
 
 ![ChallengeHandler's Structure](ChallengeHandler.drawio.svg)
 
-ChanllengeHandlerBase是所有Handler的基类，定义了`pre_handle`、`handle`、`post_handle`三个抽象方法。pre_handle保留备用。handle()用于设置网络资源以满足ACME服务器的"挑战"要求，post_handle用于完成认证后解除这些网络资源。
+ChanllengeHandlerBase是所有Handler的基类，定义了`pre_handle`、`handle`、`post_handle`三个抽象方法。pre_handle保留备用。handle()
+用于设置网络资源以满足ACME服务器的"挑战"要求，post_handle用于完成认证后解除这些网络资源。
 
 ## ChallengeHandlerBase
 
 ### get_handler_type 抽象方法
 
-获取此Handler可为指定的域名处理何种类型的"挑战"，与[RFC8555 section-9.7.8](https://datatracker.ietf.org/doc/html/rfc8555#section-9.7.8) 对应，通常是http-01、dns-01、tls-alpn-01。
+获取此Handler可为指定的标识符处理何种类型的"挑战"，与[RFC8555 section-9.7.8](https://datatracker.ietf.org/doc/html/rfc8555#section-9.7.8)
+对应，通常是http-01、dns-01、tls-alpn-01。
 
 ```python
-def get_handler_type(domain) -> str
+def get_handler_type(identifier) -> str
 ```
 
-`domain`: 指定的域名。<br>
-返回可为此域名处理何种挑战。
+`identifier`: ACME Authorization Object中的identifier。<br>
+返回可为此标识符处理何种挑战。
 
 ### pre_handle 抽象方法
 
@@ -50,6 +52,24 @@ def post_handle(url, identifier, token, key_thumbprint, succeed) -> bool
 其余参数与handle相同。
 
 post_handle方法应返回True或False，指示资源是否被成功撤销。
+
+## HandlerSet
+
+ChallengeHandler集合，可为不同的域名分别设置Handler。
+
+```python
+s = HandlerSet(default_handler=None)
+```
+
+`default_handler`：通过域名寻找Handler时，若没有与指定域名对应的Handler，则返回default_handler，当default_handler时None时，查找不存在将引发KeyError。
+
+### default_handler属性
+
+设置或获取default_handler。
+
+### 添加、查找、删除Handler
+
+HandlerSet实现了 `__setitem__`、`__getitem__`和`__delitem__`。可使用`handler_set[domain] = handler`的风格设置、查找和删除Handler。
 
 ## Dns01Handler
 
@@ -102,13 +122,16 @@ def set_record(subdomain, fld, value)
 ```python
 def del_record(subdomain, fld, value, record_id)
 ```
+
 其余参数与set_record相同<br>
 `record_id`：set_record返回的记录ID，注意对一个挑战，此参数只会被传递一次。例如<br>
+
 ```python
 handler.handle(url, 'examplr.org', token, thumbprint)
 handler.post_handle(url, 'examplr.org', token, thumbprint, True)
 handler.post_handle(url, 'examplr.org', token, thumbprint, True)
 ```
+
 则第二次调用post_handle进而调用del_record时，此次调用的record_id参数将为None。
 
 删除成功返回True，失败返回False。

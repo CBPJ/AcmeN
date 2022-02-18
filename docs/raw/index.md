@@ -184,7 +184,7 @@ acme.key_change(new_key_file, password='')
 ## 注销账户
 
 ```python
-acme.deactivate_account():
+acme.deactivate_account()
 ```
 
 **注意：** 根据[RFC8555 Account Deactivation](https://tools.ietf.org/html/rfc8555#section-7.3.6)的规定，Acme**不提供**重新启用账户的方法。
@@ -197,9 +197,7 @@ acme.deactivate_account():
 
 尽管我们在Godaddy域名管理器的网页版中发现了API v3提供了删除DNS记录的方法，但是Godaddy并没有公开发布API v3，我们也未找到相关文档，目前，AcmeN只使用已经公开发布的API接口。
 
-## 其他用法
-
-### 使用其他ACME服务商
+## 使用其他ACME服务商
 
 默认情况下，AcmeN使用[Let's Encrypt](https://letsencrypt.org/) 提供的证书签发服务。但同时，AcmeN也内置了[buypass](https://www.buypass.com/ssl/products/acme) 的服务器地址。如需使用其他服务商，可在实例化AcmeN时传入ACME服务器的Directory目录：
 
@@ -217,3 +215,18 @@ acme = AcmeN('account.key', ca='https://acme.zerossl.com/v2/DV90')
 
 非英语域名会使用punycode转义后传递给ACME服务器，默认输出文件名仍然是原文。当使用CSR申请证书时，若CSR中包含经punycode编码的CommonName，确定默认输出文件名时会将CN中punycode编码的域名转义回非英语域名。<br>
 我并未测试IDN与DNS服务商API的兼容性，而且并不是所有ACME服务商都同意签发IDN证书。
+
+## 为不同的域名设置不同的Handler
+
+若`example.com`通过Cloudflare进行DNS解析、`example.org`通过Dnspod进行DNS解析，但需要一个同时包含二者的证书，可使用HandlerSet。
+
+```python
+from AcmeN import AcmeN
+from ChallengeHandlers import *
+s = HandlerSet()
+s['example.com'] = CloudflareDnsHandler(...)
+s['example.org'] = DnspodDnsHandler(...)
+
+a = AcmeN(...)
+a.get_cert_by_domain('example.com', subject_alternative_name=['example.org', 'www.example.com'],challenge_handler=s)
+```
