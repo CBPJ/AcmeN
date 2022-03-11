@@ -104,14 +104,14 @@ class Dns01Handler(ChallengeHandlerBase):
         # TODO: Check the validity of the token.
         # possibly, token = re.sub(r"[^A-Za-z0-9_\-]", "_", token)
         domain = tld.get_tld(identifier, as_object=True, fix_protocol=True)
-        r = self.set_record(f'_acme-challenge.{domain.subdomain}', domain.fld, self.txt_value(token, key_thumbprint))
+        r = self.set_record(f'_acme-challenge.{domain.subdomain}'.rstrip('.'), domain.fld, self.txt_value(token, key_thumbprint))
 
         if not r:
             return False
 
         # check dns record every 10 seconds, 600 seconds at most.
         for i in range(60):
-            if self.check_txt_record(f'_acme-challenge.{identifier}', self.txt_value(token, key_thumbprint)):
+            if self.check_txt_record(f'_acme-challenge.{identifier}'.rstrip('.'), self.txt_value(token, key_thumbprint)):
                 return True
             else:
                 time.sleep(10)
