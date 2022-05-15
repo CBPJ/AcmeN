@@ -182,3 +182,11 @@ g = DnspodDnsHandler(secret_id, secret_key)
 
 `secret_id`: 腾讯云提供的SecretId<br>
 `secret_key`: 腾讯云提供的SecretKey
+
+## ManualDnsHandler
+
+用于手动添加和删除DNS记录。
+
+**注意：** 此方法包含交互式操作，无法用于自动化脚本。
+
+此方法会显示需要设置的TXT记录，设置完成后按ENTER，程序会自动等待DNS记录扩散。挑战完成后，按提示删除记录即可。

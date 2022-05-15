@@ -9,7 +9,8 @@ __all__ = [
     'GodaddyDnsHandler',
     'AliyunDnsHandler',
     'DnspodDnsHandler',
-    'HandlerSet'
+    'HandlerSet',
+    'ManualDnsHandler'
 ]
 __version__ = '0.4.1'
 
@@ -119,7 +120,7 @@ class Dns01Handler(ChallengeHandlerBase):
 
     def post_handle(self, url, identifier, token, key_thumbprint, succeed) -> bool:
         domain = tld.get_tld(identifier, as_object=True, fix_protocol=True)
-        return self.del_record(f'_acme-challenge.{domain.subdomain}', domain.fld,
+        return self.del_record(f'_acme-challenge.{domain.subdomain}'.rstrip('.'), domain.fld,
                                self.txt_value(token, key_thumbprint), self.__record_ids.pop(url, None))
 
     @abc.abstractmethod
@@ -482,3 +483,13 @@ class HandlerSet(ChallengeHandlerBase):
         not_exist = []
         if self.__handlers.pop(domain, not_exist) is not_exist:
             raise KeyError(f'No handler exist for domain: {domain}')
+
+
+class ManualDnsHandler(Dns01Handler):
+    def set_record(self, subdomain, fld, value):
+        input(f'manually set record and press ENTER:\n{subdomain}.{fld}\n{value}')
+        return True
+
+    def del_record(self, subdomain, fld, value, record_id) -> bool:
+        input(f'challenge is validated, delete record and press ENTER.\n{subdomain}.{fld}\n{value}')
+        return True
