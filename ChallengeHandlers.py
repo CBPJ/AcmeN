@@ -10,7 +10,8 @@ __all__ = [
     'AliyunDnsHandler',
     'DnspodDnsHandler',
     'HandlerSet',
-    'ManualDnsHandler'
+    'ManualDnsHandler',
+    'ManualHttpHandler'
 ]
 __version__ = '0.4.1'
 
@@ -492,4 +493,46 @@ class ManualDnsHandler(Dns01Handler):
 
     def del_record(self, subdomain, fld, value, record_id) -> bool:
         input(f'challenge is validated, delete record and press ENTER.\n{subdomain}.{fld}\n{value}')
+        return True
+
+
+class Http01Handler(ChallengeHandlerBase):
+    """This class handles http-01 challenges."""
+
+    def get_handler_type(self, identifier: str) -> str:
+        return 'http-01'
+
+    def pre_handle(self):
+        pass
+
+    def handle(self, url, identifier, token, key_thumbprint) -> bool:
+        return self.set_resource(identifier, token, f'{token}.{key_thumbprint}'.encode('utf8'))
+
+    def post_handle(self, url, identifier, token, key_thumbprint, succeed) -> bool:
+        return self.del_resource(identifier, token, f'{token}.{key_thumbprint}'.encode('utf8'))
+
+    @abc.abstractmethod
+    def set_resource(self, identifier, filename: str, content: bytes) -> bool:
+        pass
+
+    @abc.abstractmethod
+    def del_resource(self, identifier, filename: str, content: bytes) -> bool:
+        pass
+
+
+class ManualHttpHandler(Http01Handler):
+    def set_resource(self, identifier, filename: str, content: bytes):
+        input(f'manually complete http-01 challenge for: {identifier}\n'
+              f'path: /.well-known/acme-challenge/{filename}\n'
+              f'filename: {filename}\n'
+              f'content: {content.decode()}\n'
+              f'press ENTER to continue.')
+        return True
+
+    def del_resource(self, identifier, filename: str, content: bytes):
+        input(f'delete challenge file for: {identifier}\n'
+              f'path: /.well-known/acme-challenge/{filename}\n'
+              f'filename: {filename}\n'
+              f'content: {content.decode()}\n'
+              f'press ENTER to continue.')
         return True

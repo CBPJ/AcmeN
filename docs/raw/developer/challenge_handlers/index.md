@@ -190,3 +190,42 @@ g = DnspodDnsHandler(secret_id, secret_key)
 **注意：** 此方法包含交互式操作，无法用于自动化脚本。
 
 此方法会显示需要设置的TXT记录，设置完成后按ENTER，程序会自动等待DNS记录扩散。挑战完成后，按提示删除记录即可。
+
+## Http01Handler
+
+用于处理`http-01`挑战。
+
+`Http01Handler`是一个抽象基类。包含`set_resource`和`del_resource`两个方法，分别用于设置和删除认证所需的HTTP资源。
+
+### set_resource
+
+```python
+def set_resource(identifier, filename: str, content: bytes) -> bool
+```
+
+`identifier`：要进行认证的标识符。<br>
+`filename`：需要设置的文件名。<br>
+`content`：需要设置的文件内容
+
+根据RFC8555，设置的文件路径始终为/.well-known/acme-challenge/<filename>。
+
+### del_resource
+
+```python
+def del_resource(identifier, filename: str, content: bytes) -> bool
+```
+
+`identifier`：要进行认证的标识符。<br>
+`filename`：需要设置的文件名。<br>
+`content`：需要设置的文件内容
+
+在实现此方法时，可以校验文件内容。
+
+
+## ManualHttpHandler
+
+用于手动处理`http-01`挑战。
+
+**注意：** 此方法包含交互式操作，无法用于自动化脚本。
+
+此方法会显示需要设置的文件名称、路径和内容，设置完成后按ENTER键。认证完成后按提示删除文件即可。
