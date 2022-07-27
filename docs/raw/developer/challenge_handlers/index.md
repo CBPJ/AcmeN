@@ -229,3 +229,13 @@ def del_resource(identifier, filename: str, content: bytes) -> bool
 **注意：** 此方法包含交互式操作，无法用于自动化脚本。
 
 此方法会显示需要设置的文件名称、路径和内容，设置完成后按ENTER键。认证完成后按提示删除文件即可。
+
+## FileHttpHandler
+
+在Web Server根目录中创建http-01挑战所需的文件，自动完成http-01挑战。
+
+```python
+f = FileHttpHandler(base_dir)
+```
+
+`base_dir`：Web Server根目录。

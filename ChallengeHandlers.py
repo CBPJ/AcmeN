@@ -1,4 +1,4 @@
-import abc, base64, hashlib, functools, time, datetime, uuid, hmac, json
+import abc, base64, hashlib, functools, time, datetime, uuid, hmac, json, os
 from urllib.parse import quote
 
 import tld, requests, dns.resolver
@@ -11,7 +11,8 @@ __all__ = [
     'DnspodDnsHandler',
     'HandlerSet',
     'ManualDnsHandler',
-    'ManualHttpHandler'
+    'ManualHttpHandler',
+    'FileHttpHandler'
 ]
 __version__ = '0.4.1'
 
@@ -535,4 +536,22 @@ class ManualHttpHandler(Http01Handler):
               f'filename: {filename}\n'
               f'content: {content.decode()}\n'
               f'press ENTER to continue.')
+        return True
+
+
+class FileHttpHandler(Http01Handler):
+    def __init__(self, base_dir: str):
+        super().__init__()
+        self.__base_dir = base_dir.rstrip('/\\')
+
+    def set_resource(self, identifier, filename: str, content: bytes):
+        path = os.path.join(self.__base_dir, '.well-known', 'acme-challenge', filename)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, 'wb') as f:
+            f.write(content)
+        return True
+
+    def del_resource(self, identifier, filename: str, content: bytes):
+        path = os.path.join(self.__base_dir, '.well-known', 'acme-challenge', filename)
+        os.remove(path)
         return True
