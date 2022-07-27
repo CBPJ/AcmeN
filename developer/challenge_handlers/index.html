@@ -1,60 +1,54 @@
 <!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  
-  
-  <link rel="shortcut icon" href="../../img/favicon.ico">
-  <title>ChallengeHandling - AcmeN Docs</title>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700" />
-
-  <link rel="stylesheet" href="../../css/theme.css" />
-  <link rel="stylesheet" href="../../css/theme_extra.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
-  
-  <script>
-    // Current page data
-    var mkdocs_page_name = "ChallengeHandling";
-    var mkdocs_page_input_path = "developer/challenge_handlers/index.md";
-    var mkdocs_page_url = null;
-  </script>
-  
-  <script src="../../js/jquery-2.1.1.min.js" defer></script>
-  <script src="../../js/modernizr-2.8.3.min.js" defer></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
-  <script>hljs.initHighlightingOnLoad();</script> 
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>ChallengeHandling - AcmeN Docs</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "ChallengeHandling";
+        var mkdocs_page_input_path = "developer/challenge_handlers/index.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <script src="../../js/jquery-3.6.0.min.js" defer></script>
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+      <script>hljs.initHighlightingOnLoad();</script> 
 </head>
 
 <body class="wy-body-for-nav" role="document">
 
   <div class="wy-grid-for-nav">
-
-    
     <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
     <div class="wy-side-scroll">
       <div class="wy-side-nav-search">
-        <a href="../.." class="icon icon-home"> AcmeN Docs</a>
-        <div role="search">
+          <a href="../.." class="icon icon-home"> AcmeN Docs
+        </a><div role="search">
   <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
       <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
   </form>
 </div>
       </div>
 
-      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-                <ul>
-                    <li class="toctree-l1"><a class="reference internal" href="../..">主页</a>
-                    </li>
-                </ul>
-                <p class="caption"><span class="caption-text">开发</span></p>
-                <ul class="current">
-                    <li class="toctree-l1"><a class="reference internal" href="../acme_net_io/">网络IO</a>
-                    </li>
-                    <li class="toctree-l1 current"><a class="reference internal current" href="./">ChallengeHandling</a>
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">主页</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">开发</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../acme_net_io/">网络IO</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="./">ChallengeHandling</a>
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#challengehandlerbase">ChallengeHandlerBase</a>
         <ul>
@@ -65,6 +59,14 @@
     <li class="toctree-l3"><a class="reference internal" href="#handle">handle 抽象方法</a>
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#post_handle">post_handle 抽象方法</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#handlerset">HandlerSet</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#default_handler">default_handler属性</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#handler">添加、查找、删除Handler</a>
     </li>
         </ul>
     </li>
@@ -84,66 +86,73 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#godaddydnshandler">GodaddyDnsHandler</a>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#aliyundnshandler">AliyunDnsHandler</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#dnspoddnshandler">DnspodDnsHandler</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#manualdnshandler">ManualDnsHandler</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#http01handler">Http01Handler</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#set_resource">set_resource</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#del_resource">del_resource</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#manualhttphandler">ManualHttpHandler</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#filehttphandler">FileHttpHandler</a>
+    </li>
     </ul>
-                    </li>
-                    <li class="toctree-l1"><a class="reference internal" href="../acmen/">AcmeN</a>
-                    </li>
-                </ul>
-                <p class="caption"><span class="caption-text">其他</span></p>
-                <ul>
-                    <li class="toctree-l1"><a class="reference internal" href="../../acknowledgment/">致谢</a>
-                    </li>
-                    <li class="toctree-l1"><a class="reference internal" href="../../changelog/">ChangeLog</a>
-                    </li>
-                </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../acmen/">AcmeN</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">其他</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../acknowledgment/">致谢</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../changelog/">ChangeLog</a>
+                  </li>
+              </ul>
       </div>
     </div>
     </nav>
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
-
-      
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
-        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../..">AcmeN Docs</a>
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">AcmeN Docs</a>
+        
       </nav>
-
-      
       <div class="wy-nav-content">
-        <div class="rst-content">
-          <div role="navigation" aria-label="breadcrumbs navigation">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
-    <li><a href="../..">Docs</a> &raquo;</li>
-    
-      
-        
+    <li><a href="../.." class="icon icon-home" alt="Docs"></a> &raquo;</li>
           <li>开发 &raquo;</li>
-        
-      
-    
-    <li>ChallengeHandling</li>
+      <li>ChallengeHandling</li>
     <li class="wy-breadcrumbs-aside">
-      
     </li>
   </ul>
-  
   <hr/>
 </div>
-
-          <div role="main">
-            <div class="section">
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
               
                 <h1 id="challenge-handling">Challenge Handling<a class="headerlink" href="#challenge-handling" title="Permanent link">&para;</a></h1>
 <p>ChallengeHandlers的结构如下：</p>
 <p><img alt="ChallengeHandler's Structure" src="ChallengeHandler.drawio.svg" /></p>
-<p>ChanllengeHandlerBase是所有Handler的基类，定义了<code>pre_handle</code>、<code>handle</code>、<code>post_handle</code>三个抽象方法。pre_handle保留备用。handle()用于设置网络资源以满足ACME服务器的"挑战"要求，post_handle用于完成认证后解除这些网络资源。</p>
+<p>ChanllengeHandlerBase是所有Handler的基类，定义了<code>pre_handle</code>、<code>handle</code>、<code>post_handle</code>三个抽象方法。pre_handle保留备用。handle()
+用于设置网络资源以满足ACME服务器的"挑战"要求，post_handle用于完成认证后解除这些网络资源。</p>
 <h2 id="challengehandlerbase">ChallengeHandlerBase<a class="headerlink" href="#challengehandlerbase" title="Permanent link">&para;</a></h2>
 <h3 id="get_handler_type">get_handler_type 抽象方法<a class="headerlink" href="#get_handler_type" title="Permanent link">&para;</a></h3>
-<p>获取此Handler可为指定的域名处理何种类型的"挑战"，与<a href="https://datatracker.ietf.org/doc/html/rfc8555#section-9.7.8">RFC8555 section-9.7.8</a> 对应，通常是http-01、dns-01、tls-alpn-01。</p>
-<pre><code class="language-python">def get_handler_type(domain) -&gt; str
+<p>获取此Handler可为指定的标识符处理何种类型的"挑战"，与<a href="https://datatracker.ietf.org/doc/html/rfc8555#section-9.7.8">RFC8555 section-9.7.8</a>
+对应，通常是http-01、dns-01、tls-alpn-01。</p>
+<pre><code class="language-python">def get_handler_type(identifier) -&gt; str
 </code></pre>
-<p><code>domain</code>: 指定的域名。<br>
-返回可为此域名处理何种挑战。</p>
+<p><code>identifier</code>: ACME Authorization Object中的identifier。<br>
+返回可为此标识符处理何种挑战。</p>
 <h3 id="pre_handle">pre_handle 抽象方法<a class="headerlink" href="#pre_handle" title="Permanent link">&para;</a></h3>
 <p>保留备用，所有子类应当实现此方法但不进行任何操作。</p>
 <h3 id="handle">handle 抽象方法<a class="headerlink" href="#handle" title="Permanent link">&para;</a></h3>
@@ -162,6 +171,15 @@
 <p><code>succeed</code>：之前的handle方法是否成功。<br>
 其余参数与handle相同。</p>
 <p>post_handle方法应返回True或False，指示资源是否被成功撤销。</p>
+<h2 id="handlerset">HandlerSet<a class="headerlink" href="#handlerset" title="Permanent link">&para;</a></h2>
+<p>ChallengeHandler集合，可为不同的域名分别设置Handler。</p>
+<pre><code class="language-python">s = HandlerSet(default_handler=None)
+</code></pre>
+<p><code>default_handler</code>：通过域名寻找Handler时，若没有与指定域名对应的Handler，则返回default_handler，当default_handler时None时，查找不存在将引发KeyError。</p>
+<h3 id="default_handler">default_handler属性<a class="headerlink" href="#default_handler" title="Permanent link">&para;</a></h3>
+<p>设置或获取default_handler。</p>
+<h3 id="handler">添加、查找、删除Handler<a class="headerlink" href="#handler" title="Permanent link">&para;</a></h3>
+<p>HandlerSet实现了 <code>__setitem__</code>、<code>__getitem__</code>和<code>__delitem__</code>。可使用<code>handler_set[domain] = handler</code>的风格设置、查找和删除Handler。</p>
 <h2 id="dns01handler">Dns01Handler<a class="headerlink" href="#dns01handler" title="Permanent link">&para;</a></h2>
 <p>用于处理<code>dns-01</code>挑战。</p>
 <p>Dns01Handler是一个抽象基类，包含set_record和del_record两个抽象方法。handle方法会调用set_record方法，post_handle方法调用del_record方法。<br>
@@ -212,33 +230,66 @@ handler.post_handle(url, 'examplr.org', token, thumbprint, True)
 </code></pre>
 <p><code>api_key</code>：API key中的"key"字段。<br>
 <code>api_secret</code>：API key中的"secret"字段</p>
+<h2 id="aliyundnshandler">AliyunDnsHandler<a class="headerlink" href="#aliyundnshandler" title="Permanent link">&para;</a></h2>
+<p>处理托管在Aliyun上的域名的dns-01挑战。</p>
+<pre><code class="language-python">g = AliyunDnsHandler(access_key_id, access_key_secret)
+</code></pre>
+<p><code>access_key_id</code>：Aliyun提供的AccessKey ID。<br>
+<code>access_key_secret</code>：Aliyun提供的AccessKey Secret。</p>
+<h2 id="dnspoddnshandler">DnspodDnsHandler<a class="headerlink" href="#dnspoddnshandler" title="Permanent link">&para;</a></h2>
+<p>处理托管在腾讯云Dnspod上的域名的dns-01挑战。</p>
+<pre><code class="language-python">g = DnspodDnsHandler(secret_id, secret_key)
+</code></pre>
+<p><code>secret_id</code>: 腾讯云提供的SecretId<br>
+<code>secret_key</code>: 腾讯云提供的SecretKey</p>
+<h2 id="manualdnshandler">ManualDnsHandler<a class="headerlink" href="#manualdnshandler" title="Permanent link">&para;</a></h2>
+<p>用于手动添加和删除DNS记录。</p>
+<p><strong>注意：</strong> 此方法包含交互式操作，无法用于自动化脚本。</p>
+<p>此方法会显示需要设置的TXT记录，设置完成后按ENTER，程序会自动等待DNS记录扩散。挑战完成后，按提示删除记录即可。</p>
+<h2 id="http01handler">Http01Handler<a class="headerlink" href="#http01handler" title="Permanent link">&para;</a></h2>
+<p>用于处理<code>http-01</code>挑战。</p>
+<p><code>Http01Handler</code>是一个抽象基类。包含<code>set_resource</code>和<code>del_resource</code>两个方法，分别用于设置和删除认证所需的HTTP资源。</p>
+<h3 id="set_resource">set_resource<a class="headerlink" href="#set_resource" title="Permanent link">&para;</a></h3>
+<pre><code class="language-python">def set_resource(identifier, filename: str, content: bytes) -&gt; bool
+</code></pre>
+<p><code>identifier</code>：要进行认证的标识符。<br>
+<code>filename</code>：需要设置的文件名。<br>
+<code>content</code>：需要设置的文件内容</p>
+<p>根据RFC8555，设置的文件路径始终为/.well-known/acme-challenge/<filename>。</p>
+<h3 id="del_resource">del_resource<a class="headerlink" href="#del_resource" title="Permanent link">&para;</a></h3>
+<pre><code class="language-python">def del_resource(identifier, filename: str, content: bytes) -&gt; bool
+</code></pre>
+<p><code>identifier</code>：要进行认证的标识符。<br>
+<code>filename</code>：需要设置的文件名。<br>
+<code>content</code>：需要设置的文件内容</p>
+<p>在实现此方法时，可以校验文件内容。</p>
+<h2 id="manualhttphandler">ManualHttpHandler<a class="headerlink" href="#manualhttphandler" title="Permanent link">&para;</a></h2>
+<p>用于手动处理<code>http-01</code>挑战。</p>
+<p><strong>注意：</strong> 此方法包含交互式操作，无法用于自动化脚本。</p>
+<p>此方法会显示需要设置的文件名称、路径和内容，设置完成后按ENTER键。认证完成后按提示删除文件即可。</p>
+<h2 id="filehttphandler">FileHttpHandler<a class="headerlink" href="#filehttphandler" title="Permanent link">&para;</a></h2>
+<p>在Web Server根目录中创建http-01挑战所需的文件，自动完成http-01挑战。</p>
+<pre><code class="language-python">f = FileHttpHandler(base_dir)
+</code></pre>
+<p><code>base_dir</code>：Web Server根目录。</p>
               
             </div>
-          </div>
-          <footer>
-  
-    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../acme_net_io/" class="btn btn-neutral float-left" title="网络IO"><span class="icon icon-circle-arrow-left"></span> Previous</a>
         <a href="../acmen/" class="btn btn-neutral float-right" title="AcmeN">Next <span class="icon icon-circle-arrow-right"></span></a>
-      
-      
-        <a href="../acme_net_io/" class="btn btn-neutral" title="网络IO"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-      
     </div>
-  
 
   <hr/>
 
   <div role="contentinfo">
     <!-- Copyright etc -->
-    
       <p>copyright (c) 2020-2022 Huo Jiacheng</p>
-    
   </div>
 
-  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
 </footer>
-      
+          
         </div>
       </div>
 
@@ -246,7 +297,7 @@ handler.post_handle(url, 'examplr.org', token, thumbprint, True)
 
   </div>
 
-  <div class="rst-versions" role="note" aria-label="versions">
+  <div class="rst-versions" role="note" aria-label="Versions">
   <span class="rst-current-version" data-toggle="rst-current-version">
     
     

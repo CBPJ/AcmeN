@@ -1,53 +1,47 @@
 <!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="None">
-  
-  
-  <link rel="shortcut icon" href="img/favicon.ico">
-  <title>AcmeN Docs</title>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700" />
-
-  <link rel="stylesheet" href="css/theme.css" />
-  <link rel="stylesheet" href="css/theme_extra.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
-  
-  <script>
-    // Current page data
-    var mkdocs_page_name = "\u4e3b\u9875";
-    var mkdocs_page_input_path = "index.md";
-    var mkdocs_page_url = null;
-  </script>
-  
-  <script src="js/jquery-2.1.1.min.js" defer></script>
-  <script src="js/modernizr-2.8.3.min.js" defer></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
-  <script>hljs.initHighlightingOnLoad();</script> 
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="description" content="None" />
+      <link rel="shortcut icon" href="img/favicon.ico" />
+    <title>AcmeN Docs</title>
+    <link rel="stylesheet" href="css/theme.css" />
+    <link rel="stylesheet" href="css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "\u4e3b\u9875";
+        var mkdocs_page_input_path = "index.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <script src="js/jquery-3.6.0.min.js" defer></script>
+    <!--[if lt IE 9]>
+      <script src="js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+      <script>hljs.initHighlightingOnLoad();</script> 
 </head>
 
 <body class="wy-body-for-nav" role="document">
 
   <div class="wy-grid-for-nav">
-
-    
     <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
     <div class="wy-side-scroll">
       <div class="wy-side-nav-search">
-        <a href="." class="icon icon-home"> AcmeN Docs</a>
-        <div role="search">
+          <a href="." class="icon icon-home"> AcmeN Docs
+        </a><div role="search">
   <form id ="rtd-search-form" class="wy-form" action="./search.html" method="get">
       <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
   </form>
 </div>
       </div>
 
-      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-                <ul class="current">
-                    <li class="toctree-l1 current"><a class="reference internal current" href=".">主页</a>
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href=".">主页</a>
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#_1">特性</a>
     </li>
@@ -65,81 +59,75 @@
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#challengehandler">创建ChallengeHandler</a>
     </li>
+    <li class="toctree-l3"><a class="reference internal" href="#_5">获取证书</a>
+    </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#_5">吊销证书</a>
+    <li class="toctree-l2"><a class="reference internal" href="#_6">吊销证书</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#_6">使用证书私钥吊销证书</a>
+    <li class="toctree-l3"><a class="reference internal" href="#_7">使用证书私钥吊销证书</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#_7">使用账户密钥吊销证书</a>
+    <li class="toctree-l3"><a class="reference internal" href="#_8">使用账户密钥吊销证书</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#_8">账户密钥轮换</a>
+    <li class="toctree-l2"><a class="reference internal" href="#_9">账户密钥轮换</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#_9">注销账户</a>
+    <li class="toctree-l2"><a class="reference internal" href="#_10">注销账户</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#godaddy-api">关于Godaddy API的特别说明</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#_10">其他用法</a>
-        <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#acme_2">使用其他ACME服务商</a>
-    </li>
-        </ul>
+    <li class="toctree-l2"><a class="reference internal" href="#acme_2">使用其他ACME服务商</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#_11">查找旧版本的文档</a>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#idn">国际化域名(IDN)</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#handler">为不同的域名设置不同的Handler</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_12">通过代理服务器访问</a>
+    </li>
     </ul>
-                    </li>
-                </ul>
-                <p class="caption"><span class="caption-text">开发</span></p>
-                <ul>
-                    <li class="toctree-l1"><a class="reference internal" href="developer/acme_net_io/">网络IO</a>
-                    </li>
-                    <li class="toctree-l1"><a class="reference internal" href="developer/challenge_handlers/">ChallengeHandling</a>
-                    </li>
-                    <li class="toctree-l1"><a class="reference internal" href="developer/acmen/">AcmeN</a>
-                    </li>
-                </ul>
-                <p class="caption"><span class="caption-text">其他</span></p>
-                <ul>
-                    <li class="toctree-l1"><a class="reference internal" href="acknowledgment/">致谢</a>
-                    </li>
-                    <li class="toctree-l1"><a class="reference internal" href="changelog/">ChangeLog</a>
-                    </li>
-                </ul>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">开发</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="developer/acme_net_io/">网络IO</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="developer/challenge_handlers/">ChallengeHandling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="developer/acmen/">AcmeN</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">其他</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="acknowledgment/">致谢</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="changelog/">ChangeLog</a>
+                  </li>
+              </ul>
       </div>
     </div>
     </nav>
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
-
-      
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
-        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href=".">AcmeN Docs</a>
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href=".">AcmeN Docs</a>
+        
       </nav>
-
-      
       <div class="wy-nav-content">
-        <div class="rst-content">
-          <div role="navigation" aria-label="breadcrumbs navigation">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
-    <li><a href=".">Docs</a> &raquo;</li>
-    
-      
-    
-    <li>主页</li>
+    <li><a href="." class="icon icon-home" alt="Docs"></a> &raquo;</li>
+      <li>主页</li>
     <li class="wy-breadcrumbs-aside">
-      
     </li>
   </ul>
-  
   <hr/>
 </div>
-
-          <div role="main">
-            <div class="section">
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
               
                 <h1 id="acmen">AcmeN<a class="headerlink" href="#acmen" title="Permanent link">&para;</a></h1>
 <p><a href="https://tools.ietf.org/html/rfc8555">RFC8555</a> 自动证书管理环境Python客户端。</p>
@@ -206,23 +194,19 @@ acme.register_account(contact=['mailto:xxx@yyy.zzz'])
 <p>ca的默认值是<code>SupportedCA.LETSENCRYPT</code>，其他有效值是：<code>SupportedCA.LETSENCRYPT</code>、<code>SupportedCA.BUYPASS</code>、<code>SupportedCA.ZEROSSL</code>、<code>SupportedCA.LETSENCRYPT_STAGING</code>、<code>SupportedCA.BUYPASS_STAGING</code>。</p>
 <hr />
 <h3 id="challengehandler">创建ChallengeHandler<a class="headerlink" href="#challengehandler" title="Permanent link">&para;</a></h3>
-<p>目前AcmeN内置了Cloudflare的DNS API，更多的ChallengeHandler将在未来添加。</p>
+<p>目前AcmeN内置了Cloudflare、Godaddy、Aliyun、Dnspod的DNS API，更多的ChallengeHandler将在未来添加。</p>
 <pre><code class="language-python">from ChallengeHandler import *
 # Cloudflare (APIToken):
 dns = CloudflareDNSHandler(api_token='&lt;your_token&gt;')
-
-另外，你也可以实现自己的ChallengeHandler。
-
------
-
-### 获取证书
-
-有以下两种方式可以获取证书
-
-- 通过CSR文件获取证书：
-
-```python
-acme.get_cert_by_csr('&lt;path/to/csr_file&gt;', dns_handler=dns)
+</code></pre>
+<p>另外，你也可以实现自己的ChallengeHandler，详见<a href="developer/challenge_handlers/">ChallengeHandlers</a>。</p>
+<hr />
+<h3 id="_5">获取证书<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+<p>有以下两种方式可以获取证书</p>
+<ul>
+<li>通过CSR文件获取证书：</li>
+</ul>
+<pre><code class="language-python">acme.get_cert_by_csr('&lt;path/to/csr_file&gt;', dns_handler=dns)
 </code></pre>
 <ul>
 <li>通过域名获取证书：</li>
@@ -237,67 +221,77 @@ acme.get_cert_by_csr('&lt;path/to/csr_file&gt;', dns_handler=dns)
 <p>正常情况下，AcmeN会生成：<br />
 密钥文件：<code>{域名}.{时间戳}.{密钥类型}.key</code><br />
 证书文件：<code>{域名}.{时间戳}.{密钥类型}.crt</code></p>
-<h2 id="_5">吊销证书<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
-<h3 id="_6">使用证书私钥吊销证书<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
+<h2 id="_6">吊销证书<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
+<h3 id="_7">使用证书私钥吊销证书<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
 <p>使用证书的私钥实例化AcmeN，并调用revoke_cert方法，传入证书文件的路径。</p>
 <pre><code class="language-python">acme = AcmeN('cert_private_key.key', ca=....)
 acme.revoke_cert(cert_file)
 </code></pre>
 <p><code>cert_file</code>：需要吊销的证书文件的路径。<br /></p>
 <hr />
-<h3 id="_7">使用账户密钥吊销证书<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
+<h3 id="_8">使用账户密钥吊销证书<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
 <pre><code class="language-python">acme = AcmeN('account.key', ca=....)
 acme.revoke_cert(cert_file, challenge_handler=handler):
 </code></pre>
 <p><code>cert_file</code>：需要吊销的证书文件路径。<br /></p>
 <p>在使用账户密钥吊销证书时，若Acme服务器缓存了对域名所有权的验证，或签发此证书的账户与当前账户是同一账户，则可以直接吊销。否则AcmeN会使用challenge_handler完成域名所有权验证，然后吊销证书。详情请见<a href="developer/acmen/#revoke_cert">文档</a>。</p>
-<h2 id="_8">账户密钥轮换<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h2>
+<h2 id="_9">账户密钥轮换<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h2>
 <p>以旧密钥创建AcmeN实例后，调用<code>key_change</code>方法：</p>
 <pre><code class="language-python">acme = AcmeN('old_key.key')
 acme.key_change(new_key_file, password='')
 </code></pre>
 <p><code>new_key_file</code>：新密钥文件<br />
 <code>password</code>：保护新密钥的密码</p>
-<h2 id="_9">注销账户<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h2>
-<pre><code class="language-python">acme.deactivate_account():
+<h2 id="_10">注销账户<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h2>
+<pre><code class="language-python">acme.deactivate_account()
 </code></pre>
 <p><strong>注意：</strong> 根据<a href="https://tools.ietf.org/html/rfc8555#section-7.3.6">RFC8555 Account Deactivation</a>的规定，Acme<strong>不提供</strong>重新启用账户的方法。</p>
 <h2 id="godaddy-api">关于Godaddy API的特别说明<a class="headerlink" href="#godaddy-api" title="Permanent link">&para;</a></h2>
 <p><strong>调用Godaddy API的代码尚未从AcmeN的旧版本迁移。</strong></p>
 <p>由于<a href="https://developer.godaddy.com/doc/endpoint/domains#/">Godaddy Domain API v1</a>中并未提供删除DNS记录的方法，因此在使用<code>GodaddyDNSHandler</code>删除DNS记录时，我们采用了一种折中方案。这导致当你只有一条DNS记录时，将无法删除这条记录。在AcmeN第一次要求你手动删除记录时，你可以暂时忽略它，直接按<code>Enter</code>键继续，后续删除操作将可以正常运行，等程序结束后手动删除第一条记录。或者，你可以永久保留一条TXT记录。</p>
 <p>尽管我们在Godaddy域名管理器的网页版中发现了API v3提供了删除DNS记录的方法，但是Godaddy并没有公开发布API v3，我们也未找到相关文档，目前，AcmeN只使用已经公开发布的API接口。</p>
-<h2 id="_10">其他用法<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h2>
-<h3 id="acme_2">使用其他ACME服务商<a class="headerlink" href="#acme_2" title="Permanent link">&para;</a></h3>
+<h2 id="acme_2">使用其他ACME服务商<a class="headerlink" href="#acme_2" title="Permanent link">&para;</a></h2>
 <p>默认情况下，AcmeN使用<a href="https://letsencrypt.org/">Let's Encrypt</a> 提供的证书签发服务。但同时，AcmeN也内置了<a href="https://www.buypass.com/ssl/products/acme">buypass</a> 的服务器地址。如需使用其他服务商，可在实例化AcmeN时传入ACME服务器的Directory目录：</p>
 <pre><code class="language-python">acme = AcmeN('account.key', ca='https://acme.zerossl.com/v2/DV90')
 </code></pre>
 <h2 id="_11">查找旧版本的文档<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h2>
 <p>目前我们暂未单独提供旧版本的文档，但文档与代码一同进行版本控制，你可以使用git检出之前的版本，在/docs目录下可找到对应的文档。目前文档使用<a href="https://www.mkdocs.org"><code>mkdocs</code></a>渲染，你可以使用mkdocs在/docs文件夹下构建html版本。</p>
+<h2 id="idn">国际化域名(IDN)<a class="headerlink" href="#idn" title="Permanent link">&para;</a></h2>
+<p>*目前AcmeN提供实验性国际化域名支持</p>
+<p>非英语域名会使用punycode转义后传递给ACME服务器，默认输出文件名仍然是原文。当使用CSR申请证书时，若CSR中包含经punycode编码的CommonName，确定默认输出文件名时会将CN中punycode编码的域名转义回非英语域名。<br>
+我并未测试IDN与DNS服务商API的兼容性，而且并不是所有ACME服务商都同意签发IDN证书。</p>
+<h2 id="handler">为不同的域名设置不同的Handler<a class="headerlink" href="#handler" title="Permanent link">&para;</a></h2>
+<p>若<code>example.com</code>通过Cloudflare进行DNS解析、<code>example.org</code>通过Dnspod进行DNS解析，但需要一个同时包含二者的证书，可使用HandlerSet。</p>
+<pre><code class="language-python">from AcmeN import AcmeN
+from ChallengeHandlers import *
+s = HandlerSet()
+s['example.com'] = CloudflareDnsHandler(...)
+s['example.org'] = DnspodDnsHandler(...)
+
+a = AcmeN(...)
+a.get_cert_by_domain('example.com', subject_alternative_name=['example.org', 'www.example.com'],challenge_handler=s)
+</code></pre>
+<h2 id="_12">通过代理服务器访问<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h2>
+<p>为AcmeN提供网络操作的requests库会遵循<code>http_proxy</code>和<code>https_proxy</code>环境变量的设置。也可以手动设置代理服务器，如：</p>
+<pre><code class="language-python">acme = AcmeN('account.key', proxy='http://localhost:8080')
+</code></pre>
               
             </div>
-          </div>
-          <footer>
-  
-    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
         <a href="developer/acme_net_io/" class="btn btn-neutral float-right" title="网络IO">Next <span class="icon icon-circle-arrow-right"></span></a>
-      
-      
     </div>
-  
 
   <hr/>
 
   <div role="contentinfo">
     <!-- Copyright etc -->
-    
       <p>copyright (c) 2020-2022 Huo Jiacheng</p>
-    
   </div>
 
-  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
 </footer>
-      
+          
         </div>
       </div>
 
@@ -305,7 +299,7 @@ acme.key_change(new_key_file, password='')
 
   </div>
 
-  <div class="rst-versions" role="note" aria-label="versions">
+  <div class="rst-versions" role="note" aria-label="Versions">
   <span class="rst-current-version" data-toggle="rst-current-version">
     
     
@@ -328,6 +322,6 @@ acme.key_change(new_key_file, password='')
 </html>
 
 <!--
-MkDocs version : 1.2.3
-Build Date UTC : 2022-02-02 10:28:39.544843+00:00
+MkDocs version : 1.3.1
+Build Date UTC : 2022-07-27 08:11:35.218706+00:00
 -->
