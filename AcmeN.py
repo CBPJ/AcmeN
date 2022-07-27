@@ -71,7 +71,7 @@ class AcmeNetIO:
     }
 
     def __init__(self, keyfile, password=None, ca: typing.Union[SupportedCA, str] = SupportedCA.LETSENCRYPT,
-                 session=None):
+                 session=None, proxy=None):
         """This object performs ACME requests.
 
         :param keyfile: The pem format private key used for sign ACME requests.
@@ -103,6 +103,11 @@ class AcmeNetIO:
         else:
             self.__session = requests.Session()
             self.__session.headers.update(headers)
+        # set up proxy
+        if proxy:
+            # according to RFC8555 section 6.1, 'Use of HTTPS is REQUIRED'.
+            # thus the http proxy is not necessary.
+            self.__session.proxies.update({'http': proxy, 'https': proxy})
 
         # read keyfile
         with open(keyfile, 'rb') as file:
@@ -313,12 +318,12 @@ class AcmeNetIO:
 
 
 class AcmeN:
-    def __init__(self, key_file, key_passphrase='', ca=SupportedCA.LETSENCRYPT):
+    def __init__(self, key_file, key_passphrase='', ca=SupportedCA.LETSENCRYPT, proxy=None):
         # logger
         self.__log = logging.getLogger()
 
         # Account params
-        self.__netio = AcmeNetIO(key_file, key_passphrase, ca)
+        self.__netio = AcmeNetIO(key_file, key_passphrase, ca, proxy=proxy)
 
     @staticmethod
     def __openssl(command, options, communicate=None):

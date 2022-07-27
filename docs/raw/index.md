@@ -105,14 +105,15 @@ ca的默认值是`SupportedCA.LETSENCRYPT`，其他有效值是：`SupportedCA.L
 
 ### 创建ChallengeHandler
 
-目前AcmeN内置了Cloudflare的DNS API，更多的ChallengeHandler将在未来添加。
+目前AcmeN内置了Cloudflare、Godaddy、Aliyun、Dnspod的DNS API，更多的ChallengeHandler将在未来添加。
 
 ```python
 from ChallengeHandler import *
 # Cloudflare (APIToken):
 dns = CloudflareDNSHandler(api_token='<your_token>')
+```
 
-另外，你也可以实现自己的ChallengeHandler。
+另外，你也可以实现自己的ChallengeHandler，详见[ChallengeHandlers](./developer/challenge_handlers/index.md)。
 
 -----
 
@@ -230,3 +231,11 @@ s['example.org'] = DnspodDnsHandler(...)
 a = AcmeN(...)
 a.get_cert_by_domain('example.com', subject_alternative_name=['example.org', 'www.example.com'],challenge_handler=s)
 ```
+
+## 通过代理服务器访问
+
+为AcmeN提供网络操作的requests库会遵循`http_proxy`和`https_proxy`环境变量的设置。也可以手动设置代理服务器，如：
+
+```python
+acme = AcmeN('account.key', proxy='http://localhost:8080')
+``` 

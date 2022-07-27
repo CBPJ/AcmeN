@@ -5,12 +5,13 @@ AcmeN封装了常见的ACME操作的时序控制。通过调用AcmeNetIO，完�
 ## 实例化
 
 ```python
-acmen = AcmeN(key_file, key_passphrase='', ca=SupportedCA.LETSENCRYPT)
+acmen = AcmeN(key_file, key_passphrase='', ca=SupportedCA.LETSENCRYPT, proxy=None)
 ```
 
 `key_file`：执行签名时将使用的私钥文件。<br>
 `key_passphrase`：保护私钥文件的短语，若私钥未加密可留空。<br>
-`ca`：要使用的ACME服务器，可以是SupportedCA枚举的一个成员，也可以是其他有效ACME服务器的directory目录地址。
+`ca`：要使用的ACME服务器，可以是SupportedCA枚举的一个成员，也可以是其他有效ACME服务器的directory目录地址。<br>
+`proxy`：代理服务器的地址，例如：http://localhost:8080。
 
 ## 方法
 

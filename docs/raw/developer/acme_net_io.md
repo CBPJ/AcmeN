@@ -6,13 +6,14 @@ AcmeNetIO 组件负责签名请求以及与ACME服务器交互。另外，在轮
 ## 实例化
 
 ```python
-n = AcmeNetIO(keyfile, password=None, ca=SupportedCA.LETSENCRYPT, session=None)
+n = AcmeNetIO(keyfile, password=None, ca=SupportedCA.LETSENCRYPT, session=None, proxy=None)
 ```
 
 `keyfile`：用于签名的密钥文件。<br>
 `password`：保护密钥文件的密码，可选。<br>
 `ca`：使用的CA服务器，可以是SupportedCA枚举的一个成员，也可以是ACME服务的Directory URL，默认使用Let's Encrypt服务，可选。<br>
 `session`：共享的requests.Session对于，AcmeNetIO可以与外部代码共享一个Session，若没有提供共享Session，会自动创建一个新的Session，可选。
+`proxy`：代理服务器的地址，可选，若同时传入session，此设置将通过`session.proxies.update(proxy)`覆盖session中的代理设置。
 
 在实例化时，init方法创建session，并读取密钥文件。若在实例化时传入session参数，则不会更新此session的header。
 
