@@ -14,7 +14,7 @@ __all__ = [
     'ManualHttpHandler',
     'FileHttpHandler'
 ]
-__version__ = '0.4.1'
+__version__ = '0.4.2'
 
 
 class ChallengeHandlerBase(abc.ABC):

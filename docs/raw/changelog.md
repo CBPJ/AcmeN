@@ -1,5 +1,14 @@
 # ChangeLog
 
+## v0.4.2
+
+- 添加代理设置
+- 添加http-01挑战处理器
+- 添加HandlerSet用于处理不同域名的挑战
+- 添加国际化域名(IDN)支持
+- 添加DnsPod API
+- 添加Aliyun API
+
 ## v0.4.1
 
 - 迁移GodaddyDnsHandler
