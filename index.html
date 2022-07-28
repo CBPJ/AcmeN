@@ -75,8 +75,6 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#_10">注销账户</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#godaddy-api">关于Godaddy API的特别说明</a>
-    </li>
     <li class="toctree-l2"><a class="reference internal" href="#acme_2">使用其他ACME服务商</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#_11">查找旧版本的文档</a>
@@ -246,10 +244,6 @@ acme.key_change(new_key_file, password='')
 <pre><code class="language-python">acme.deactivate_account()
 </code></pre>
 <p><strong>注意：</strong> 根据<a href="https://tools.ietf.org/html/rfc8555#section-7.3.6">RFC8555 Account Deactivation</a>的规定，Acme<strong>不提供</strong>重新启用账户的方法。</p>
-<h2 id="godaddy-api">关于Godaddy API的特别说明<a class="headerlink" href="#godaddy-api" title="Permanent link">&para;</a></h2>
-<p><strong>调用Godaddy API的代码尚未从AcmeN的旧版本迁移。</strong></p>
-<p>由于<a href="https://developer.godaddy.com/doc/endpoint/domains#/">Godaddy Domain API v1</a>中并未提供删除DNS记录的方法，因此在使用<code>GodaddyDNSHandler</code>删除DNS记录时，我们采用了一种折中方案。这导致当你只有一条DNS记录时，将无法删除这条记录。在AcmeN第一次要求你手动删除记录时，你可以暂时忽略它，直接按<code>Enter</code>键继续，后续删除操作将可以正常运行，等程序结束后手动删除第一条记录。或者，你可以永久保留一条TXT记录。</p>
-<p>尽管我们在Godaddy域名管理器的网页版中发现了API v3提供了删除DNS记录的方法，但是Godaddy并没有公开发布API v3，我们也未找到相关文档，目前，AcmeN只使用已经公开发布的API接口。</p>
 <h2 id="acme_2">使用其他ACME服务商<a class="headerlink" href="#acme_2" title="Permanent link">&para;</a></h2>
 <p>默认情况下，AcmeN使用<a href="https://letsencrypt.org/">Let's Encrypt</a> 提供的证书签发服务。但同时，AcmeN也内置了<a href="https://www.buypass.com/ssl/products/acme">buypass</a> 的服务器地址。如需使用其他服务商，可在实例化AcmeN时传入ACME服务器的Directory目录：</p>
 <pre><code class="language-python">acme = AcmeN('account.key', ca='https://acme.zerossl.com/v2/DV90')
@@ -323,5 +317,5 @@ a.get_cert_by_domain('example.com', subject_alternative_name=['example.org', 'ww
 
 <!--
 MkDocs version : 1.3.1
-Build Date UTC : 2022-07-27 08:16:44.132282+00:00
+Build Date UTC : 2022-07-28 01:35:33.060055+00:00
 -->
