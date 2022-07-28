@@ -254,24 +254,9 @@ class GodaddyDnsHandler(Dns01Handler):
 
     def del_record(self, subdomain, fld, value, record_id) -> bool:
         # get dns records
-        r = self.__session.get(f'{self.__api_url}/domains/{fld}/records/TXT/{subdomain}')
+        r = self.__session.delete(f'{self.__api_url}/domains/{fld}/records/TXT/{subdomain}')
         if not r.ok:
-            raise RuntimeError(f'Failed to query dns record from Godaddy. {r.status_code} {r.reason}, {r.text}')
-        domains = r.json()
-
-        if len(domains) == 0:
-            raise RuntimeError(f'No record for {subdomain}.{fld}.')
-
-        # delete matching record from domains. send the remains as PUT payload.
-        payload = [i for i in domains if i['data'] != value and value is not None]
-        if len(payload) == 0:
-            r = self.__session.delete(f'{self.__api_url}/domains/{fld}/records/TXT/{subdomain}')
-        elif len(payload) != len(domains):
-            r = self.__session.put(f'{self.__api_url}/domains/{fld}/records/TXT/{subdomain}', json=payload)
-        else:  # len(payload) == len(domains)
-            raise RuntimeError('No record matching the given value.')
-        if not r.ok:
-            raise RuntimeError(f'Failed to delete record {subdomain}.{fld}. {r.status_code} {r.reason}, {r.text}')
+            raise RuntimeError(f'Failed to delete record {subdomain.rstrip(".")}.{fld}: {r.status_code} {r.reason}, {r.text}')
         return True
 
 

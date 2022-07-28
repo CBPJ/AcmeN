@@ -190,14 +190,6 @@ acme.deactivate_account()
 
 **注意：** 根据[RFC8555 Account Deactivation](https://tools.ietf.org/html/rfc8555#section-7.3.6)的规定，Acme**不提供**重新启用账户的方法。
 
-## 关于Godaddy API的特别说明
-
-**调用Godaddy API的代码尚未从AcmeN的旧版本迁移。**
-
-由于[Godaddy Domain API v1](https://developer.godaddy.com/doc/endpoint/domains#/)中并未提供删除DNS记录的方法，因此在使用`GodaddyDNSHandler`删除DNS记录时，我们采用了一种折中方案。这导致当你只有一条DNS记录时，将无法删除这条记录。在AcmeN第一次要求你手动删除记录时，你可以暂时忽略它，直接按`Enter`键继续，后续删除操作将可以正常运行，等程序结束后手动删除第一条记录。或者，你可以永久保留一条TXT记录。
-
-尽管我们在Godaddy域名管理器的网页版中发现了API v3提供了删除DNS记录的方法，但是Godaddy并没有公开发布API v3，我们也未找到相关文档，目前，AcmeN只使用已经公开发布的API接口。
-
 ## 使用其他ACME服务商
 
 默认情况下，AcmeN使用[Let's Encrypt](https://letsencrypt.org/) 提供的证书签发服务。但同时，AcmeN也内置了[buypass](https://www.buypass.com/ssl/products/acme) 的服务器地址。如需使用其他服务商，可在实例化AcmeN时传入ACME服务器的Directory目录：
