@@ -239,3 +239,27 @@ f = FileHttpHandler(base_dir)
 ```
 
 `base_dir`：Web Server根目录。
+
+## TlsAlpn01Handler
+
+**注意：** `TlsAlpn01Handler`仍处于开发阶段，继承结构和调用方式仍会更改。
+
+用于处理`tls-alpn-01`挑战，`TlsAlpn01Handler`会创建一个TLS服务器，与ACME服务器执行TLS握手，并完成挑战。也可以通过`create_acmetls1_cert`方法创建用于完成挑战的TLS证书。
+
+```python
+t = TlsAlpn01Handler(listen_addr, listen_port)
+```
+
+`listen_addr`：TLS服务器监听的地址，默认是'0.0.0.0'。<br>
+`listen_port`：TLS服务器监听的端口，默认是443。
+
+### create_acmetls1_cert
+
+创建用于`tls-alpn-01`挑战的证书。
+
+
+```python
+def create_acmetls1_cert(identifier, token, key_thumbprint) -> (bytes, bytes):
+```
+
+参数与`ChallengeHandlerBase.handle`方法相同。此方法返回(私钥, 证书)元组，PEM编码。

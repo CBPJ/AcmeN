@@ -622,6 +622,7 @@ class AcmeN:
                 self.__log.debug('Retrying to check the authorization status.')
                 r_authz = self.__netio.send_request('', AcmeAction.VariableUrlAction, authz_url)
                 retry_counter -= 1
+            # TODO: ensure post_handle is executed when send_request is failed.
             r = challenge_handler.post_handle(challenge['url'], r_authz.content['identifier']['value'],
                                               challenge['token'], self.__netio.key_thumbprint, r)
             if r_authz.content['status'] != 'valid':

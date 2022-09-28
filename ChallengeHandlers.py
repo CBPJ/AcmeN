@@ -1,7 +1,13 @@
-import abc, base64, hashlib, functools, time, datetime, uuid, hmac, json, os
+import abc, base64, hashlib, functools, time, datetime, uuid, hmac, json, os, socket, ssl, threading, logging, tempfile
+import typing
 from urllib.parse import quote
 
 import tld, requests, dns.resolver
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat import backends
+from cryptography.x509 import NameOID
 
 __all__ = [
     'ChallengeHandlerBase',
@@ -12,7 +18,8 @@ __all__ = [
     'HandlerSet',
     'ManualDnsHandler',
     'ManualHttpHandler',
-    'FileHttpHandler'
+    'FileHttpHandler',
+    'TlsAlpn01Handler'
 ]
 __version__ = '0.4.2'
 
@@ -540,3 +547,136 @@ class FileHttpHandler(Http01Handler):
         path = os.path.join(self.__base_dir, '.well-known', 'acme-challenge', filename)
         os.remove(path)
         return True
+
+
+class TlsAlpn01Handler(ChallengeHandlerBase):
+    def __init__(self, listen_addr: str = '0.0.0.0', listen_port: int = 443):
+        """
+
+        :param listen_addr: address to listen on
+        :param listen_port: port to listen on
+        """
+        self.__log = logging.getLogger(__name__)
+        self.__shutdown_flag = False
+        self.__tls_thread = None
+        self.__listen_addr = listen_addr
+        self.__listen_port = listen_port
+
+    def get_handler_type(self, identifier: str) -> str:
+        return 'tls-alpn-01'
+
+    def pre_handle(self):
+        pass
+
+    def create_acmetls1_cert(self, identifier, token, key_thumbprint) -> (bytes, bytes):
+        """Create a self-signed certificate contains an acmeIdentifier extension.
+
+        :param identifier: The identifier in the ACME authorization object.
+        :param token: The token from the challenge.
+        :param key_thumbprint: The thumbprint of the account key.
+        :return: (private key, certificate), both in pem format.
+        """
+
+        key_authz = f'{token}.{key_thumbprint}'
+        key_authz = hashlib.sha256(key_authz.encode('utf8')).digest()
+        key_authz = b'\x04\x20' + key_authz  # ASN.1 OCTET STRING format
+
+        # This key is used to complete the tls-alpn-01 challenge only.
+        # So, it doesn't respect the key_generate_method setting of the AcmeN.
+        key = rsa.generate_private_key(65537, 2048, backends.default_backend())
+
+        subject = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, f'ACME Client(AcmeN/{__version__})')])
+
+        # Generate a self-signed certificate contains an acmeIdentifier extension.
+        # According to RFC 8737, Section 3, the acmeIdentifier extension must be critical.
+        # And the oid of the acmeIdentifier extension is 1.3.6.1.5.5.7.1.31(RFC 5280, Section 4.2.2).
+        cert = x509.CertificateBuilder() \
+            .subject_name(subject) \
+            .issuer_name(subject) \
+            .add_extension(x509.SubjectAlternativeName([x509.DNSName(identifier)]), critical=False) \
+            .add_extension(x509.UnrecognizedExtension(x509.oid.ObjectIdentifier('1.3.6.1.5.5.7.1.31'), key_authz), True) \
+            .serial_number(x509.random_serial_number()) \
+            .not_valid_before(datetime.datetime.utcnow()) \
+            .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=1)) \
+            .public_key(key.public_key()) \
+            .sign(key, hashes.SHA256(), backends.default_backend())
+
+        # Export the private key and certificate in pem format.
+        key = key.private_bytes(serialization.Encoding.PEM,
+                                serialization.PrivateFormat.TraditionalOpenSSL,
+                                serialization.NoEncryption())
+        cert = cert.public_bytes(serialization.Encoding.PEM)
+        return key, cert
+
+    def handle(self, url, identifier, token, key_thumbprint) -> bool:
+        key, cert = self.create_acmetls1_cert(identifier, token, key_thumbprint)
+        self.__tls_thread = threading.Thread(target=self.__tls_server_entry,
+                                             args=(key, cert, (self.__listen_addr, self.__listen_port)),
+                                             daemon=True)
+        self.__tls_thread.start()
+        time.sleep(5)  # wait for the server to start
+        return True
+
+    def post_handle(self, url, identifier, token, key_thumbprint, succeed) -> bool:
+        self.__shutdown_flag = True
+        self.__tls_thread.join()
+        self.__shutdown_flag = False
+        return True
+
+    def __tls_server_entry(self, key: bytes, cert: bytes, bind_addr: typing.Tuple[str, int]):
+        """Start a TLS server.
+
+        :param bind_addr: The address to bind to. eg: ('0.0.0.0', 443)
+        :param key: The private key in PEM format.
+        :param cert: The certificate in PEM format.
+        """
+
+        # create a tls context using the key and cert
+        # according to RFC 8737 section 4, server will use TLSv1.2 or higher
+        context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+        # set alpn_protocols to acme-tls-1
+        context.set_alpn_protocols(['acme-tls/1'])
+
+        # write the key and cert to a temporary file
+        key_file = tempfile.NamedTemporaryFile(delete=False)
+        cert_file = tempfile.NamedTemporaryFile(delete=False)
+        self.__log.debug(f'write key to {key_file.name}')
+        self.__log.debug(f'write cert to {cert_file.name}')
+        key_file.write(key)
+        key_file.flush()
+        cert_file.write(cert)
+        cert_file.flush()
+        key_file.close()
+        cert_file.close()
+
+        # load the key and cert from the temporary file
+        context.load_cert_chain(cert_file.name, key_file.name)
+
+        # TODO: add dual-stack support
+        listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        listener.bind(bind_addr)
+        listener.listen(1)
+        listener.settimeout(1)
+        self.__log.debug('tls server is waiting for connection')
+        while not self.__shutdown_flag:
+            try:
+                sock, addr = listener.accept()
+            except socket.timeout:
+                continue
+
+            self.__log.debug(f'accepted connection from {addr}')
+
+            # If an ignorant client, like a browser, connected to the server during the validation process,
+            # there will be a SSLError.
+            try:
+                sock = context.wrap_socket(sock, server_side=True)
+            except ssl.SSLError as e:
+                self.__log.error(f'failed to wrap socket: {e}')
+            finally:
+                sock.close()
+
+        listener.close()
+        self.__log.debug('tls server is shutdown')
+        os.remove(key_file.name)
+        os.remove(cert_file.name)
