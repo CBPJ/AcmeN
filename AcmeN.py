@@ -129,7 +129,9 @@ class AcmeNetIO:
             return self.__directory
 
         self.__log.info('Fetching information from the ACME directory.')
-        res = self.__session.get(self.__directory_url)
+        header = self.__session.headers.copy()
+        del header['Content-Type']
+        res = self.__session.get(self.__directory_url, headers=header)
         if res.ok:
             self.__directory = res.json()
         else:
@@ -176,10 +178,9 @@ class AcmeNetIO:
             return result
 
         # According to RFC8555 section 7.2, both HEAD and GET will work.
-        # But I don't think the Content-Type header should present when using the HEAD or GET method.
-        # But it works for now.
-        # TODO: Delete Content-Type header from HEAD or GET request.
-        res = self.__session.head(self.directory[self.__BasicFields[AcmeAction.NewNonce]])
+        header = self.__session.headers.copy()
+        del header['Content-Type']
+        res = self.__session.head(self.directory[self.__BasicFields[AcmeAction.NewNonce]], headers=header)
         if not res.ok:
             raise RuntimeError(f'Failed to get nonce: {res.status_code} {res.reason}, {res.text}')
         return res.headers['Replay-Nonce']
