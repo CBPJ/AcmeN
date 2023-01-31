@@ -1,3 +1,4 @@
+import re
 import subprocess, json, time, logging, collections, enum, typing, base64, functools
 
 import requests
@@ -90,7 +91,7 @@ class AcmeNetIO:
             self.__directory_url = ca
         else:
             raise TypeError('Invalid ca, the ca parameter should be a member of SupportedCA or a valid directory URL')
-        self._nonce = ''
+        self.__nonce = None
 
         # set up session
         headers = {
@@ -117,6 +118,32 @@ class AcmeNetIO:
         else:
             self.__key = jwk.JWK.from_pem(data)
         pass
+
+    @property
+    def _nonce(self) -> str:
+        if self.__nonce:
+            result = self.__nonce
+            self.__nonce = None
+            return result
+
+        # According to RFC8555 section 7.2, both HEAD and GET will work.
+        header = self.__session.headers.copy()
+        del header['Content-Type']
+        self.__log.debug(f'Getting new nonce from {self.directory[self.__BasicFields[AcmeAction.NewNonce]]}')
+        res = self.__session.head(self.directory[self.__BasicFields[AcmeAction.NewNonce]], headers=header)
+        if not res.ok:
+            raise RuntimeError(f'Failed to get nonce: {res.status_code} {res.reason}, {res.text}')
+        # TODO: prevent infinite loop when the server keeps sending invalid nonce.
+        self._nonce = res.headers['Replay-Nonce']
+        return self._nonce
+    @_nonce.setter
+    def _nonce(self, value: str):
+
+        # according to RFC8555 section 6.5.1, client MUST check the validity of the Replay-Nonce.
+        if re.match(r'^[A-Za-z0-9_-]+$', value) is None:
+            self.__log.warning(f'Invalid nonce (base64url decoding failed): {value}')
+        else:
+            self.__nonce = value
 
     @property
     def directory(self) -> dict:
@@ -165,25 +192,6 @@ class AcmeNetIO:
     def key_thumbprint(self) -> str:
         return self.__key.thumbprint()
 
-    def _get_nonce(self):
-        """Get a Replay-Nonce, either comes from the last response or request a new one.
-
-        :raises RuntimeError: If the http status code indicates the request is failed.
-        TODO: according to RFC8555 section 6.5.1, client MUST check the validity of the Replay-Nonce.
-        """
-
-        if self._nonce:
-            result = self._nonce
-            self._nonce = None
-            return result
-
-        # According to RFC8555 section 7.2, both HEAD and GET will work.
-        header = self.__session.headers.copy()
-        del header['Content-Type']
-        res = self.__session.head(self.directory[self.__BasicFields[AcmeAction.NewNonce]], headers=header)
-        if not res.ok:
-            raise RuntimeError(f'Failed to get nonce: {res.status_code} {res.reason}, {res.text}')
-        return res.headers['Replay-Nonce']
 
     def sign_request(self, payload, action: AcmeAction, url: str = None) -> str:
         """Sign a request and return the jws string.
@@ -235,7 +243,7 @@ class AcmeNetIO:
         }
 
         if action != AcmeAction.KeyChangeInner:
-            protected['nonce'] = self._get_nonce()
+            protected['nonce'] = self._nonce
 
         # only the newAccount and revokeCert by a certificate key use the jwk header.
         # besides, the inner jws of a changeKey request also use the jwk header.
@@ -288,8 +296,6 @@ class AcmeNetIO:
         # every successful response will contain a Replay-Nonce header, RFC8555 section 6.5.
         # besides, a badNonce error will also contain a Replay-Nonce (RFC8555 section 6.5), but let's just ignored it.
         if r.ok:
-            # TODO: check the validity of the Replay-Nonce, duplicated with the todo in _get_nonce.
-            # Maybe I should make the nonce a property.
             self._nonce = r.headers['Replay-Nonce']
 
             # Replay-Nonce could be transparent to the higher layer code.
