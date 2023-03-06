@@ -104,6 +104,12 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#filehttphandler">FileHttpHandler</a>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#tlsalpn01handler">TlsAlpn01Handler</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#create_acmetls1_cert">create_acmetls1_cert</a>
+    </li>
+        </ul>
+    </li>
     </ul>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../acmen/">AcmeN</a>
@@ -272,6 +278,18 @@ handler.post_handle(url, 'examplr.org', token, thumbprint, True)
 <pre><code class="language-python">f = FileHttpHandler(base_dir)
 </code></pre>
 <p><code>base_dir</code>：Web Server根目录。</p>
+<h2 id="tlsalpn01handler">TlsAlpn01Handler<a class="headerlink" href="#tlsalpn01handler" title="Permanent link">&para;</a></h2>
+<p><strong>注意：</strong> <code>TlsAlpn01Handler</code>仍处于开发阶段，继承结构和调用方式仍会更改。</p>
+<p>用于处理<code>tls-alpn-01</code>挑战，<code>TlsAlpn01Handler</code>会创建一个TLS服务器，与ACME服务器执行TLS握手，并完成挑战。也可以通过<code>create_acmetls1_cert</code>方法创建用于完成挑战的TLS证书。</p>
+<pre><code class="language-python">t = TlsAlpn01Handler(listen_addr, listen_port)
+</code></pre>
+<p><code>listen_addr</code>：TLS服务器监听的地址，默认是'0.0.0.0'。<br>
+<code>listen_port</code>：TLS服务器监听的端口，默认是443。</p>
+<h3 id="create_acmetls1_cert">create_acmetls1_cert<a class="headerlink" href="#create_acmetls1_cert" title="Permanent link">&para;</a></h3>
+<p>创建用于<code>tls-alpn-01</code>挑战的证书。</p>
+<pre><code class="language-python">def create_acmetls1_cert(identifier, token, key_thumbprint) -&gt; (bytes, bytes):
+</code></pre>
+<p>参数与<code>ChallengeHandlerBase.handle</code>方法相同。此方法返回(私钥, 证书)元组，PEM编码。</p>
               
             </div>
           </div><footer>
