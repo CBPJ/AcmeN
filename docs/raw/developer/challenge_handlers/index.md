@@ -15,7 +15,7 @@ ChanllengeHandlerBase是所有Handler的基类，定义了`pre_handle`、`handle
 对应，通常是http-01、dns-01、tls-alpn-01。
 
 ```python
-def get_handler_type(identifier) -> str
+def get_handler_type(identifier) -> str:
 ```
 
 `identifier`: ACME Authorization Object中的identifier。<br>

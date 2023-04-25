@@ -5,7 +5,8 @@ AcmeN封装了常见的ACME操作的时序控制。通过调用AcmeNetIO，完�
 ## 实例化
 
 ```python
-acmen = AcmeN(key_file, key_passphrase='', ca=SupportedCA.LETSENCRYPT, proxy=None)
+from acmen import AcmeN, SupportedCA
+acme = AcmeN('/path/to/key_file.key', key_passphrase='', ca=SupportedCA.LETSENCRYPT, proxy=None)
 ```
 
 `key_file`：执行签名时将使用的私钥文件。<br>
@@ -34,7 +35,7 @@ def register_account(contact: typing.List[str] = None, eab_key_identifier: str =
 通过域名获取证书。
 
 ```python
-get_cert_by_domain(common_name: str, subject_alternative_name: typing.List[str],
+def get_cert_by_domain(common_name: str, subject_alternative_name: typing.List[str],
                    challenge_handler: ChallengeHandlerBase,
                    key_generation_method: KeyGenerationMethod = KeyGenerationMethod.CryptographyLib,
                    key_type: KeyType = KeyType.RSA3072, output_name: str = '') -> (bytes, bytes):
@@ -98,7 +99,7 @@ def revoke_cert(self, cert_file, reason: RevocationReason = None, challenge_hand
 更换ACME账户的密钥。
 
 ```python
-key_change(self, new_key_file, password: str = '') -> None
+def key_change(self, new_key_file, password: str = '') -> None:
 ```
 
 `new_key_file`：新的账户密钥。<br>

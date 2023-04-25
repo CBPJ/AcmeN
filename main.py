@@ -1,5 +1,5 @@
 import logging
-from acmen import *
+from acmen import AcmeN
 from acmen.handlers import CloudflareDnsHandler
 
 logging.basicConfig(level=logging.INFO)

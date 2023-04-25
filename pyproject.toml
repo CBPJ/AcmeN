@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "acmen"
-version = "0.4.2"
-authors = [{ name = "Explr" }]
+version = "0.5.0"
+authors = [{ name = "Jiacheng Huo" }]
 description = "An ACME(RFC8555) client implementation in Python."
 readme = "README.md"
 requires-python = ">=3.7"
@@ -18,9 +18,10 @@ dependencies = [
     "requests == 2.*",
     "tld == 0.13.*",
     "jwcrypto == 1.*",
-    "cryptography == 39.*"
+    "cryptography == 40.*"
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/CBPJ/AcmeN"
+"Documentation" = "https://cbpj.github.io/AcmeN/"
+"Source" = "https://github.com/CBPJ/AcmeN"
 "Bug Tracker" = "https://github.com/CBPJ/AcmeN/issues"
