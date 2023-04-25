@@ -111,7 +111,8 @@
                 <h1 id="acmen">AcmeN<a class="headerlink" href="#acmen" title="Permanent link">&para;</a></h1>
 <p>AcmeN封装了常见的ACME操作的时序控制。通过调用AcmeNetIO，完成常见的ACME操作。</p>
 <h2 id="_1">实例化<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
-<pre><code class="language-python">acmen = AcmeN(key_file, key_passphrase='', ca=SupportedCA.LETSENCRYPT, proxy=None)
+<pre><code class="language-python">from acmen import AcmeN, SupportedCA
+acme = AcmeN('/path/to/key_file.key', key_passphrase='', ca=SupportedCA.LETSENCRYPT, proxy=None)
 </code></pre>
 <p><code>key_file</code>：执行签名时将使用的私钥文件。<br>
 <code>key_passphrase</code>：保护私钥文件的短语，若私钥未加密可留空。<br>
@@ -128,7 +129,7 @@
 <p>此方法返回账户的URL。</p>
 <h3 id="get_cert_by_domain">get_cert_by_domain<a class="headerlink" href="#get_cert_by_domain" title="Permanent link">&para;</a></h3>
 <p>通过域名获取证书。</p>
-<pre><code class="language-python">get_cert_by_domain(common_name: str, subject_alternative_name: typing.List[str],
+<pre><code class="language-python">def get_cert_by_domain(common_name: str, subject_alternative_name: typing.List[str],
                    challenge_handler: ChallengeHandlerBase,
                    key_generation_method: KeyGenerationMethod = KeyGenerationMethod.CryptographyLib,
                    key_type: KeyType = KeyType.RSA3072, output_name: str = '') -&gt; (bytes, bytes):
@@ -168,7 +169,7 @@
 当发生错误或没有传入challenge_handler参数时，假定实例化AcmeN时传入的私钥是证书对应的私钥，使用此密钥签名吊销请求(在jws protected header中使用jwk)。</p>
 <h3 id="key_change">key_change<a class="headerlink" href="#key_change" title="Permanent link">&para;</a></h3>
 <p>更换ACME账户的密钥。</p>
-<pre><code class="language-python">key_change(self, new_key_file, password: str = '') -&gt; None
+<pre><code class="language-python">def key_change(self, new_key_file, password: str = '') -&gt; None:
 </code></pre>
 <p><code>new_key_file</code>：新的账户密钥。<br>
 <code>password</code>：保护新密钥的密码。</p>

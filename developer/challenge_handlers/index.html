@@ -155,7 +155,7 @@
 <h3 id="get_handler_type">get_handler_type 抽象方法<a class="headerlink" href="#get_handler_type" title="Permanent link">&para;</a></h3>
 <p>获取此Handler可为指定的标识符处理何种类型的"挑战"，与<a href="https://datatracker.ietf.org/doc/html/rfc8555#section-9.7.8">RFC8555 section-9.7.8</a>
 对应，通常是http-01、dns-01、tls-alpn-01。</p>
-<pre><code class="language-python">def get_handler_type(identifier) -&gt; str
+<pre><code class="language-python">def get_handler_type(identifier) -&gt; str:
 </code></pre>
 <p><code>identifier</code>: ACME Authorization Object中的identifier。<br>
 返回可为此标识符处理何种挑战。</p>
