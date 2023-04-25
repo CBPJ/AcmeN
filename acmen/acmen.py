@@ -8,9 +8,9 @@ from cryptography.hazmat import backends
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import rsa, ec
 
-from ChallengeHandlers import ChallengeHandlerBase
+from .handlers import ChallengeHandlerBase
+from .__version__ import __version__
 
-__version__ = '0.4.2'
 __all__ = ['SupportedCA', 'AcmeNetIO', 'AcmeN', 'KeyType', 'KeyGenerationMethod', 'RevocationReason']
 
 AcmeResponse = collections.namedtuple('AcmeResponse', ('code', 'headers', 'content'))
@@ -95,7 +95,7 @@ class AcmeNetIO:
 
         # set up session
         headers = {
-            'User-Agent': f'AcmeN/{__version__}',
+            'User-Agent': f'acmen/{__version__}',
             'Accept-Language': 'en',
             'Content-Type': 'application/jose+json'
         }

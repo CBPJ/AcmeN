@@ -9,6 +9,8 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat import backends
 from cryptography.x509 import NameOID
 
+from .__version__ import __version__
+
 __all__ = [
     'ChallengeHandlerBase',
     'CloudflareDnsHandler',
@@ -21,7 +23,6 @@ __all__ = [
     'FileHttpHandler',
     'TlsAlpn01Handler'
 ]
-__version__ = '0.4.2'
 
 
 class ChallengeHandlerBase(abc.ABC):
@@ -582,7 +583,7 @@ class TlsAlpn01Handler(ChallengeHandlerBase):
         key_authz = b'\x04\x20' + key_authz  # ASN.1 OCTET STRING format
 
         # This key is used to complete the tls-alpn-01 challenge only.
-        # So, it doesn't respect the key_generate_method setting of the AcmeN.
+        # So, it doesn't respect the key_generate_method setting of the acmen.
         key = rsa.generate_private_key(65537, 2048, backends.default_backend())
 
         subject = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, f'ACME Client(AcmeN/{__version__})')])

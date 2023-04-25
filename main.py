@@ -1,6 +1,6 @@
 import logging
-from AcmeN import AcmeN
-from ChallengeHandlers import CloudflareDnsHandler
+from acmen import *
+from acmen.handlers import CloudflareDnsHandler
 
 logging.basicConfig(level=logging.INFO)
 
