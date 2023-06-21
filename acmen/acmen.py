@@ -95,6 +95,7 @@ class AcmeNetIO:
         # TODO: prevent infinite loop when the server keeps sending invalid nonce.
         self._nonce = res.headers['Replay-Nonce']
         return self._nonce
+
     @_nonce.setter
     def _nonce(self, value: str):
 
@@ -150,7 +151,6 @@ class AcmeNetIO:
     @property
     def key_thumbprint(self) -> str:
         return self.__key.thumbprint()
-
 
     def sign_request(self, payload, action: AcmeAction, url: str = None) -> str:
         """Sign a request and return the jws string.
@@ -562,39 +562,30 @@ class AcmeN:
                              f'type: {challenge["type"]}')
             r = challenge_handler.handle(challenge['url'], r_authz.content['identifier']['value'],
                                          challenge['token'], self.__netio.key_thumbprint)
-            self.__log.debug('Notifying server to validate the challenge.')
-            r_challenge = self.__netio.send_request({}, AcmeAction.VariableUrlAction, challenge['url'])
 
-            # According to RFC8555 section 7.5.1, client should send Post-as-Get request to authorization url.
-            # check the challenge status, retry 5 times if it's still processing.
+            try:
+                self.__log.debug('Notifying server to validate the challenge.')
+                r_challenge = self.__netio.send_request({}, AcmeAction.VariableUrlAction, challenge['url'])
 
-            # retry_counter = 5
-            # while r_challenge.content['status'] in ('processing', 'pending')  and retry_counter > 0:
-            #     time.sleep(int(r_challenge.headers.get('Retry-After', '5')))
-            #     r_challenge = self.__netio.send_request('', AcmeAction.VariableUrlAction, r_challenge.content['url'])
-            #     retry_counter -= 1
-            #
-            # if r_challenge.content['status'] != 'valid':
-            #     raise RuntimeError(f'Challenge status is not valid: {r_challenge.content["url"]}, '
-            #                        f'status: {r_challenge.content["status"]}, authorization: {authz_url}, '
-            #                        f'identifier: {r_authz.content["identifier"]["value"]}.')
-
-            # check the authorization status.
-            retry_counter = 5
-            self.__log.debug('Checking authorization status.')
-            r_authz = self.__netio.send_request('', AcmeAction.VariableUrlAction, authz_url)
-            while r_authz.content['status'] == 'pending' and retry_counter > 0:
-                time.sleep(int(r_authz.headers.get('Retry-After', 5)))
-                self.__log.debug('Retrying to check the authorization status.')
+                # check the authorization status.
+                retry_counter = 5
+                self.__log.debug('Checking authorization status.')
                 r_authz = self.__netio.send_request('', AcmeAction.VariableUrlAction, authz_url)
-                retry_counter -= 1
-            # TODO: ensure post_handle is executed when send_request is failed.
-            r = challenge_handler.post_handle(challenge['url'], r_authz.content['identifier']['value'],
-                                              challenge['token'], self.__netio.key_thumbprint, r)
-            if r_authz.content['status'] != 'valid':
-                raise RuntimeError(f'Authorization status is not valid: {authz_url}, '
-                                   f'status: {r_authz.content["status"]}, '
-                                   f'identifier: {r_authz.content["identifier"]["value"]}.')
+                while r_authz.content['status'] == 'pending' and retry_counter > 0:
+                    time.sleep(int(r_authz.headers.get('Retry-After', 5)))
+                    self.__log.debug('Retrying to check the authorization status.')
+                    r_authz = self.__netio.send_request('', AcmeAction.VariableUrlAction, authz_url)
+                    retry_counter -= 1
+                if r_authz.content['status'] != 'valid':
+                    raise RuntimeError(f'Authorization status is not valid: {authz_url}, '
+                                       f'status: {r_authz.content["status"]}, '
+                                       f'identifier: {r_authz.content["identifier"]["value"]}.')
+            except Exception as e:
+                raise e
+            finally:
+                r = challenge_handler.post_handle(challenge['url'], r_authz.content['identifier']['value'],
+                                                  challenge['token'], self.__netio.key_thumbprint, r)
+
 
         # check the order status
         self.__log.debug('Checking order status.')
