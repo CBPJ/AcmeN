@@ -44,6 +44,7 @@ class AcmeNetIO:
         """
         self.__log = logging.getLogger()
         self.__directory = None
+        self.__ca_tos = None
         if isinstance(ca, SupportedCA):
             self.__directory_url = ca.value
         elif isinstance(ca, str):
@@ -106,6 +107,21 @@ class AcmeNetIO:
             self.__nonce = value
 
     @property
+    def ca_tos(self) -> typing.Union[str, None]:
+        """Get url of the CA's terms of service.
+
+        :return: The url of the CA's terms of service.
+        :raise RuntimeError: If the server send a failed response code.
+        """
+        if self.__ca_tos == 'NO':
+            return None
+        elif self.__ca_tos is None:
+            _ = self.directory  # fetch the directory object to determine whether the CA has a TOS.
+            return self.ca_tos
+        elif self.__ca_tos:
+            return self.__ca_tos
+
+    @property
     def directory(self) -> dict:
         """Get the directory object of given ACME server.
 
@@ -128,7 +144,10 @@ class AcmeNetIO:
             if 'termsOfService' in self.__directory['meta']:
                 self.__log.warning(f'Terms Of Service will be automatically agreed. '
                                    f'you could find them at {self.__directory["meta"]["termsOfService"]}')
-                # TODO: Add a property to indicate whether the CA has a TOS.
+                self.__ca_tos = self.__directory['meta']['termsOfService']
+            else:
+                self.__ca_tos = 'NO'
+
             if 'externalAccountRequired' in self.__directory['meta'] \
                     and self.__directory['meta']['externalAccountRequired'] is True:
                 self.__log.warning('This server requires an external account.')
@@ -290,6 +309,10 @@ class AcmeN:
 
         # Account params
         self.__netio = AcmeNetIO(key_file, key_passphrase, ca, proxy=proxy)
+
+    @property
+    def ca_tos(self) -> typing.Union[str, None]:
+        return self.__netio.ca_tos
 
     @staticmethod
     def __openssl(command, options, communicate=None):
@@ -585,7 +608,6 @@ class AcmeN:
             finally:
                 r = challenge_handler.post_handle(challenge['url'], r_authz.content['identifier']['value'],
                                                   challenge['token'], self.__netio.key_thumbprint, r)
-
 
         # check the order status
         self.__log.debug('Checking order status.')
