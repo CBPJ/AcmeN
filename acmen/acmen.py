@@ -606,6 +606,7 @@ class AcmeN:
             except Exception as e:
                 raise e
             finally:
+                # TODO: prompt user to clean up the challenge when post_handle failed(returned False).
                 r = challenge_handler.post_handle(challenge['url'], r_authz.content['identifier']['value'],
                                                   challenge['token'], self.__netio.key_thumbprint, r)
 

@@ -168,6 +168,7 @@ class CloudflareDnsHandler(Dns01Handler):
         :param api_token: The cloudflare token, api-key is deprecated.
         """
         super().__init__()
+        self.__log = logging.getLogger(__name__)
         self.__session = requests.Session()
         self.__api_url = 'https://api.cloudflare.com/client/v4'
         headers = {
@@ -211,7 +212,8 @@ class CloudflareDnsHandler(Dns01Handler):
             if r.ok:
                 return True
             else:
-                raise RuntimeError(f'Del record {subdomain}.{fld} failed: {r.status_code} {r.status_code}, {r.text}')
+                self.__log.warning(f'Del record {subdomain}.{fld} failed: {r.status_code} {r.status_code}, {r.text}')
+                return False
 
         # otherwise, query the record first.
         r = self.__session.get(f'{self.__api_url}/zones/{self._get_zone_id(fld)}/dns_records',
@@ -221,7 +223,8 @@ class CloudflareDnsHandler(Dns01Handler):
         result = r.json()['result']
         if len(result) == 0:
             # TODO: return false, make log, and do not raise RuntimeError.
-            raise RuntimeError('No matching record.')
+            self.__log.warning(f'No matching record found for {subdomain}.{fld}')
+            return False
         else:
             return self.del_record(subdomain, fld, value, result[0]['id'])
 
