@@ -513,8 +513,9 @@ class AcmeN:
         # poll order status
         retry_counter = 5
         while r_order.content['status'] == 'processing' and retry_counter > 0:
+            self.__log.debug(f'Order is processing, retry after {r_order.headers.get("Retry-After", "5")} seconds.')
             time.sleep(int(r_order.headers.get('Retry-After', '5')))
-            self.__log.debug('Order is processing, polling order status.')
+            self.__log.debug(f'Polling order status, retry_counter is: {retry_counter}.')
             r_order = self.__netio.send_request('', AcmeAction.VariableUrlAction, r_order.headers['Location'])
             retry_counter -= 1
         if r_order.content['status'] != 'valid':
