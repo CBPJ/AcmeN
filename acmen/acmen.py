@@ -11,6 +11,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa, ec
 from .handlers import ChallengeHandlerBase
 from .__version__ import __version__
 from .enums import *
+from . import utils
 
 __all__ = ['AcmeNetIO', 'AcmeN']
 
@@ -513,8 +514,9 @@ class AcmeN:
         # poll order status
         retry_counter = 5
         while r_order.content['status'] == 'processing' and retry_counter > 0:
-            self.__log.debug(f'Order is processing, retry after {r_order.headers.get("Retry-After", "5")} seconds.')
-            time.sleep(int(r_order.headers.get('Retry-After', '5')))
+            delay = utils.parse_retry_after(r_order.headers.get('Retry-After'))
+            self.__log.debug(f'Order is processing, retry after {delay} seconds.')
+            time.sleep(delay)
             self.__log.debug(f'Polling order status, retry_counter is: {retry_counter}.')
             r_order = self.__netio.send_request('', AcmeAction.VariableUrlAction, r_order.headers['Location'])
             retry_counter -= 1
@@ -596,7 +598,7 @@ class AcmeN:
                 self.__log.debug('Checking authorization status.')
                 r_authz = self.__netio.send_request('', AcmeAction.VariableUrlAction, authz_url)
                 while r_authz.content['status'] == 'pending' and retry_counter > 0:
-                    time.sleep(int(r_authz.headers.get('Retry-After', 5)))
+                    time.sleep(utils.parse_retry_after(r_authz.headers.get('Retry-After')))
                     self.__log.debug('Retrying to check the authorization status.')
                     r_authz = self.__netio.send_request('', AcmeAction.VariableUrlAction, authz_url)
                     retry_counter -= 1
