@@ -437,8 +437,9 @@ class AcmeN:
         # generate CSR
         c = x509.CertificateSigningRequestBuilder()
         c = c.subject_name(x509.Name([x509.NameAttribute(x509.NameOID.COMMON_NAME, common_name)]))
-        if subject_alternative_name:
-            c = c.add_extension(x509.SubjectAlternativeName([x509.DNSName(i) for i in subject_alternative_name]), True)
+        san = [x509.DNSName(i) for i in subject_alternative_name] if subject_alternative_name else []
+        san.append(x509.DNSName(common_name))
+        c = c.add_extension(x509.SubjectAlternativeName(san), True)
         c = c.sign(key, hashes.SHA256())
 
         # process order
