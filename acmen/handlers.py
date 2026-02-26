@@ -120,6 +120,8 @@ class Dns01Handler(ChallengeHandlerBase):
         if not r:
             return False
 
+        self.__record_ids[url] = r
+
         # check dns record every 10 seconds, 600 seconds at most.
         for i in range(60):
             if self.check_txt_record(f'_acme-challenge.{identifier}'.rstrip('.'), self.txt_value(token, key_thumbprint)):
@@ -305,7 +307,7 @@ class AliyunDnsHandler(Dns01Handler):
         string_to_sign = f'POST&%2F&{quote(string_to_sign)}'
         signature = hmac.new(self.__key_secret.encode('utf8'), msg=string_to_sign.encode('utf8'),
                              digestmod='sha1').digest()
-        params['Signature'] = base64.b64encode(signature)
+        params['Signature'] = base64.b64encode(signature).decode('utf8')
         return params
 
     def set_record(self, subdomain, fld, value):
